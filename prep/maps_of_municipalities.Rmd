@@ -1,0 +1,128 @@
+---
+title: "Creating maps of municipalities and counties of northern Norway"
+author: "Marina Espinasse"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: '~/github/spfood/src/style.css'
+    code_folding: show
+    toc: true
+    toc_depth: 3
+    toc_float: yes
+    number_sections: true
+    theme: lumen
+    highlight: espresso
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set
+source('~/github/spfood/src/common.r')
+```
+
+Loading mapping libraries
+```{r include = FALSE}
+library(mapdata)
+library(maptools)
+library(rgdal)
+library(maps)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+# Loading shapefiles of municipalities, counties, and the list of municipalities of the project
+
+Many of the files are taken from another open repository - nor-prep
+```{r}
+fylker <-readOGR(dsn = "/Users/marinaespinasse/github/nor-prep/prep/administrative/raw/shapefiles/NO_Fylker")
+allkommuner <-readOGR(dsn = "/Users/marinaespinasse/github/nor-prep/prep/administrative/raw/shapefiles/NO_AdminOmrader")
+komlist <-read.csv("/Users/marinaespinasse/github/nor-prep/prep/administrative/komlist.csv", sep = ";")
+```
+
+# Preparing data and map layers
+## Filtering out municipallities that are not in the project and changing CRS
+Here I also change the projection of the municipalities shape file.
+```{r }
+komlist <-filter(komlist, !Name == "NonCoast")
+ohikom <-allkommuner[allkommuner$KOMM %in% komlist$Komnum,] 
+ohifylke <-fylker[fylker$NAVN %in% c("Nordland", "Troms", "Finnmark"),]
+kommuner.pol <- spTransform(ohikom, CRS("+proj=longlat +ellps=GRS80"))
+fylker.pol <-spTransform(ohikom, CRS("+proj=longlat +ellps=GRS80"))
+```
+
+Load the world mapping layers and create an sf-object based on the municipalities shape file.
+```{r }
+world <- ne_countries(scale = "medium", returnclass = "sf")
+kommunersf <- sf::st_as_sf(ohikom, coords= c("long", "lat"),crs = 4326, agr="identity")
+fylkersf <-sf::st_as_sf(ohifylke, coords= c("long", "lat"),crs = 4326, agr="identity")
+```
+
+##  Mapping counties
+```{r }
+base_layer_counties <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "gray46", 
+   size = 0.1) +
+  geom_sf(data = fylkersf, fill = NA, aes(color = NAVN), size = 0.6) +
+  coord_sf(xlim = c(10, 32), ylim = c(64,72)) +
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.position = "none",
+        panel.background = element_rect(fill = "aliceblue") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  scale_color_manual(values = c("#cc9351", "#8c3688", "#388f40" ))
+ 
+base_layer_counties
+```
+
+```{r}
+ggsave(paste0("figs/counties_map.pdf"), base_layer_counties, dpi = 300)
+```
+
+
+## Mapping municipalities with color based on county
+First adding county column to kommunersf dataframe
+```{r}
+kommunersf_cny <- kommunersf %>% 
+  mutate(county = case_when(
+ KOMM >= 1800 &  KOMM < 1900 ~ "Nordland",
+                                    KOMM >= 1900 &  KOMM < 2000 ~ "Troms",
+                                    KOMM >= 2000 ~ "Finnmark"
+ ))
+```
+
+```{r}
+base_layer_mp <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "gray43", 
+   size = 0.1) +
+  geom_sf(data = kommunersf_cny, fill = NA, aes(color = county), size = 0.6) +
+  coord_sf(xlim = c(10, 32), ylim = c(64,72)) +
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15),
+        legend.position = "none",
+        panel.background = element_rect(fill = "aliceblue") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  scale_color_manual(values = c("#cc9351", "#8c3688", "#388f40" ))
+ 
+base_layer_mp
+
+```
+
+
+```{r}
+ggsave(paste0("./figs/municipalities_map.pdf"), base_layer_mp, dpi = 300)
+```
+
