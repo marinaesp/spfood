@@ -1,0 +1,17 @@
+---
+title: "OHI-Norway header"
+output: html_fragment
+---
+<p align = "center">
+[![ohi logo](norway.png)](http://ohi-science.org)
+<br>
+[Coastal barometer blog](https://kystbarometeret.com) |
+[Coastal barometer website](https://kystbarometeret2021.vercel.app) |
+</p>
+
+
+
+
+
+
+
