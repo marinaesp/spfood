@@ -1,0 +1,226 @@
+---
+title: "Estimating total aquaculture production"
+author: "*Compiled on `r date()` by `r Sys.info()['user']`*"
+output: 
+  html_document:
+    css: '~/github/spfood/src/style.css'
+    toc: true
+    number_sections: true
+    theme: cerulean
+    highlight: haddock
+    includes: 
+      in_header: '~/github/spfood/src/spfood_banner.html'
+  pdf_document:
+    toc: true
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source('~/github/spfood/src/common.r')
+```
+
+```{r include = FALSE}
+library(janitor)
+library(ggthemes)
+library(here)
+```
+
+# Loading aquaculture production data with feed used, biomass change per month, lost fish and seeded fish.
+```{r}
+
+load_by_sheet <-function(x, page = 1) {
+  read_excel(file.path(x),sheet = page)
+}
+
+path <-file.path("~/github/nor-data/aquaculture/19_13709_Biomasse_utsett_annet_uttak_2005-2018.xlsx")
+
+
+page <- 2:15
+
+allyears <- map2(path, page, load_by_sheet) 
+
+biomass_prep <-  allyears %>% 
+  do.call("rbind", .) %>% 
+  clean_names(.)
+
+municip <- read.table(here("prep", "raw_data", "komlist.csv" ), header = TRUE, sep = ";")
+```
+
+## Estimate change in the biomass during a year 
+We calculate the change in biomass as a difference in biomass in December of a year X, minus biomass in December of year X-1. Grane municipality will be deleted from the table below, because this municipality is non-coastal and is not included in the analysis.
+```{r}
+biomass_prep2 <- biomass_prep %>% 
+  rename(year = aar) %>% 
+  group_by(kommune) %>% 
+  arrange(year) %>% 
+  mutate(laks_des_previous_year = lag(laks_des_beh_kg)) %>% 
+  mutate(rengb_des_previous_year = lag(regnb_des_beh_kg)) %>% 
+  ungroup() %>% 
+  mutate(biomchange_salmon = (laks_des_beh_kg-laks_des_previous_year)) %>% 
+  mutate(biomchange_trout = (regnb_des_beh_kg-rengb_des_previous_year)) %>% 
+  left_join(municip[,c(1,2)], by = c("kommunenr"="Komnum")) %>% 
+  mutate(kommune = Name) %>% 
+  select(-Name) %>% 
+  filter(!is.na(kommune))  #Delete rows with Grane municipality (number of municipality 1825) 
+```
+
+
+Function to replace biomass change, when no data for the previous year is available:
+the idea is to take the difference in biomass between the latest and earliest month with data in a given year, when there was no production in the previous year.
+Example (imaginary):  municipality XX had no production in 2015. In 2016, they got fish but not from the beginning of the year. Fish was likely moved from another municipality in March and was harvested in September. Then, the difference in biomass between September and March is the production in XX in 2016.
+If we would just subtract biomass in December 2016 from biomass in December  2015 (which is NA), we will get NA in the total production in 2016. But that would not be correct. 
+
+```{r}
+output_vect <-as.numeric()
+replace_biomass <- function(cols) {
+  biomdat <- as.numeric(cols)
+  if (sum(biomdat) == 0) {
+    biomchange <- 0
+  } else {
+    output_vect <- biomdat[which(biomdat > 0)]
+    biomchange <- sum(output_vect[length(output_vect)], -output_vect[1])
+  }
+  biomchange
+}
+```
+
+And apply this function for year when December to December difference was NA.
+
+```{r}
+missingdat <- filter(biomass_prep2, is.na(biomchange_salmon)) %>%
+  rowwise() %>%
+  mutate(biomchange_salmon_replaced = replace_biomass(c(
+    laks_jan_beh_kg,
+    laks_feb_beh_kg,
+    laks_mar_beh_kg,
+    laks_apr_beh_kg,
+    laks_mai_beh_kg,
+    laks_jun_beh_kg,
+    laks_jul_beh_kg,
+    laks_aug_beh_kg,
+    laks_sep_beh_kg,
+    laks_okt_beh_kg,
+    laks_nov_beh_kg,
+    laks_des_beh_kg
+  ))) %>%
+  mutate(biomchange_trout_replaced = replace_biomass(c( #nothing to replace for trout, it is all zeroes
+    regnb_jan_beh_kg,
+    regnb_feb_beh_kg,
+    regnb_mar_beh_kg,
+    regnb_apr_beh_kg,
+    regnb_mai_beh_kg,
+    regnb_jun_beh_kg,
+    regnb_jul_beh_kg,
+    regnb_aug_beh_kg,
+    regnb_sep_beh_kg,
+    regnb_okt_beh_kg,
+    regnb_nov_beh_kg,
+    regnb_des_beh_kg
+  ))) %>% 
+  select(-c(biomchange_salmon,biomchange_trout)) %>% 
+  rename(biomchange_salmon = biomchange_salmon_replaced, 
+         biomchange_trout = biomchange_trout_replaced)
+
+```
+
+And bind the rows with NA biomass changes and other rows together.
+```{r}
+biomass_prep3 <- biomass_prep2 %>% 
+  filter(year!= 2005) %>% 
+  filter(!is.na(biomchange_salmon)) %>% 
+  bind_rows(missingdat) 
+```
+
+We an use 0.88 coefficient to change round weight to slaughter weight of fish, but we decided (June 2020)
+to keep the round weight. I simply replace 0.88 with 1, to be able to quickly revert back to slaughter weight if we'd need.
+There is also an addition of live fish during the production. I learned from aquaculture producers that the weight of these added fish can vary a lot, but often somewhere between 1.5-3.5 kg. We  simply tested the weights 1.5 -2 -2.5 -3 -3.5 kg and see which option gives minimal number of negative total production (negative cannot be right). 1.5 was most suitable weight, and it was suggested as common by the producers.
+The weight of smolts is assumed to be 100 grams, and the weight of discarded salmon - **5**  kg.
+Finally, the total production is
+$Tot.prod = \triangle Biomass + harvest + removed\ fish  - seeded\ smolts - added\ fish - discard$
+```{r}
+production_prep <- biomass_prep3 %>%
+  select(c(
+    year,
+    fylke,
+    kommunenr,
+    kommune,
+    utsatt_smolt_stk,
+    utsatt_annen_stk,
+    tap_utkast,
+    uttak_slakt_laks_kg,
+    uttak_annen_laks_kg,
+    uttak_slakt_regnb_kg,
+    uttak_annen_regnb_kg,
+    biomchange_salmon,
+    biomchange_trout,
+    forforbruk_kg
+  )) %>%
+  mutate(discarded_kg = tap_utkast * 5) %>% 
+  mutate_at(
+    vars(
+      utsatt_smolt_stk
+    ),
+    ~ . * 0.1
+  ) %>%
+  mutate_at(     
+    vars(
+     utsatt_annen_stk,
+     uttak_slakt_laks_kg,
+     uttak_annen_laks_kg,
+     uttak_slakt_regnb_kg,
+     uttak_annen_regnb_kg,
+     biomchange_salmon,
+     biomchange_trout
+    ),
+    ~ .*1
+  ) %>% 
+ mutate_at(
+    vars(
+      utsatt_annen_stk #this is added live fish, which weight we have to guess, assumed to be 1.5 kg
+    ),
+    ~ . * 1.5
+  ) %>% 
+  rename(
+    county = fylke,
+    municip_number = kommunenr,
+    municip = kommune,
+    harvest_salmon_main_kg = uttak_slakt_laks_kg,
+    harvest_salmon_other_kg = uttak_annen_laks_kg,
+    harvest_trout_main_kg = uttak_slakt_regnb_kg,
+    harvest_trout_other_kg = uttak_annen_regnb_kg,
+    seeded_smolts_kg = utsatt_smolt_stk,
+    added_fish_kg = utsatt_annen_stk,
+    feed_kg = forforbruk_kg) %>% 
+   mutate(
+     production_final = 
+       pmap_dbl(
+         list(
+          biomchange_salmon,
+          biomchange_trout,
+          harvest_salmon_main_kg,
+          harvest_salmon_other_kg,
+          harvest_trout_main_kg,
+          harvest_trout_other_kg,
+          -seeded_smolts_kg,
+          -added_fish_kg,
+          -discarded_kg
+         ),
+         sum
+       ))
+
+filter(production_prep, production_final < 0) %>% tally()
+```
+
+# Save total annual production table:
+```{r}
+production_prep_save <- production_prep %>% 
+  select(year,
+         county,
+         municip_number,
+         municip,
+         feed_kg,
+         production_final)
+
+write.csv(production_prep_save, "~/github/nor-data/aquaculture/aquaculture_production_per_municipality.csv", row.names = F)
+
+```
+
