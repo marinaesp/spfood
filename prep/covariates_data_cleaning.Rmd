@@ -1,0 +1,287 @@
+---
+title: "Preparing covariates for the analysis of seafood production"
+author: "Marina Espinasse"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: '~/github/spfood/src/style.css'
+    toc: true
+    number_sections: true
+    theme: cerulean
+    highlight: haddock
+    includes: 
+      in_header: '~/github/spfood/src/spfood_banner.html'
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+source('~/github/spfood/src/common.R')
+```
+
+Here I will prepare a table with covariates that I will use in the analysis of sea food production. The covariates are: population of each municipality, population growth, unemployment, sea area of a municipality,and gini p10 coefficient of equality
+
+```{r}
+library(vroom)
+library(here)
+```
+
+# Import the data
+
+Data on fisheries and aquaculture production are ready to be used. The other data series need to be cleaned.
+
+First, fisheries catch and aquaculture production tables. Note, that aquaculture production table is loaded from another repository, nor-data. This is a closed repository, and aquaculture data is held there until Fisheries Directorate allow to share them
+```{r}
+aqua <- read.csv(file.path("~/github/nor-data/aquaculture/aquaculture_production_per_municipality.csv"))
+
+aqua_prep <- aqua %>% 
+  select(-feed_kg) %>% 
+  rename(aqua_prod = production_final)
+
+```
+
+Fisheries data still includes catch per species, I will take a sum of all species catches, to get a total fisheries production in tons
+```{r}
+fish <- read.csv(here("prep", "output_data", "catch_total_per_mcp.csv"))
+
+fish_prep <- fish %>% 
+  clean_names(.) %>% 
+  rename(municip = municip_name_new,
+         total_catch = total_catch_new) |> 
+  group_by(year, municip, municip_number) |> 
+  summarize(total_catch = sum(total_catch, na.rm = T))
+
+```
+
+
+
+Sea area of each municipality: I clean the data by removing covariates we don't need and renaming the others. Sea area data can be found at
+https://www.kartverket.no/til-lands/fakta-om-norge/storleiken-pa-landet
+
+```{r}
+sea <- read_excel(here("prep", "raw_data", "KommArea.xlsx"))
+
+sea_prep <- sea %>% 
+  clean_names(.) %>% 
+  select(-c(fastland_og_yer, kid, total_areal)) %>% 
+  rename(sea_area = havflate,
+         municip_number = komnum,
+         municip = name)
+  
+```
+
+
+# Covariates data 
+## Gator dataset
+The Gator data xxset of municipality level statistic. I downloaded this data set from:
+https://dataverse.no/file.xhtml?fileId=2140&version=1.1
+
+```{r}
+gator <-vroom(here("prep", "raw_data", "gatorsub.csv"), delim = ",")
+```
+
+I will subset this dataset - choose only 3 counties (Nordland, Troms, and Finnmark) and only the variables I will need (population, growth, unemployment)
+```{r}
+gator_prep <-gator %>% 
+  filter(fylke %in% c("17", "18", "19")) %>% 
+  filter(year  >= 2005 & year <= 2018 ) %>% 
+  select(c(komnr,
+           kommune,
+           year,
+           fylke,
+           natinnby,
+           innbypros,
+           poprate,
+           arb_led,
+           )) %>% 
+  mutate(municip_pop = natinnby*innbypros/100) %>% 
+  mutate(municip_pop_ths = municip_pop/1000)
+```
+
+Rename variables to English
+```{r}
+gator_prep2 <- gator_prep |> 
+  select(-c(natinnby,innbypros)) |> 
+  rename(municip_number = komnr,
+         municip=kommune,
+         county = fylke,
+         pop_growth = poprate,
+         unemp = arb_led)
+```
+
+Next dataset is p90p10 index. I will rename this index to "wageco", for "wage coefficient". Source of the dataset:
+https://www.ssb.no/inntekt-og-forbruk/artikler-og-publikasjoner/slik-maler-ssb-ulikhet
+
+```{r}
+wageco <- read_excel(here("prep", "raw_data", "gini_p10_wagescoeff.xlsx"),
+                     range = "A4:AE91", 
+                     .name_repair = ~janitor::make_clean_names(.))
+
+wageco_prep <- wageco |> 
+  select(c(1,18:31)) |> 
+  separate(x, into = c("municip_number", "municip"), sep = " ") |> 
+  mutate_at(.vars = c(3:16), as.numeric) |> 
+  pivot_longer(cols = c(3:16)) |> 
+  mutate(year = str_extract_all(name, "[:digit:]{4}")
+         ) 
+
+wageco_prep2 <- wageco_prep |> 
+  select(-name) |> 
+  rename(wageco = value) |> 
+  mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
+  mutate(wageco = as.numeric(as.character(wageco)))
+
+```
+7 missing values in the wage ratios data - those are all data from Harstad municipality
+
+```{r}
+filter(wageco_prep2, is.na(wageco))
+```
+
+
+# SSB variables
+
+Variables are from:
+https://www.ssb.no/statbank/table/06913/tableViewLayout1/
+
+https://www.ssb.no/statbank/table/01222/
+
+https://www.ssb.no/statbank/table/10594
+
+
+Other variables similar to Gator: population growth, unemployment, population of municipalities.
+Gator has too many missing observations: 275 out of 1044 for population growth, 174 for unemployment, and also 129 for population (not all years' records present)
+Instead, I will use Statistics Norway data that seem to be complete (and are quality controlled)
+
+## Population growth
+```{r, warning=F}
+popgrowth <- read_excel(here("prep", "raw_data", "Folketilvekst10.xlsx"),
+                         range = "A3:C5658",
+        .name_repair = ~janitor::make_clean_names(.)
+          )
+
+popgrowth_prep <- popgrowth |> 
+  fill(x) |> 
+  separate(x, into = c("municip_number", "municip"), sep = " ") |> 
+  rename(popgrowth = folkevekst) |> 
+  mutate(year = str_sub(x_2, start = 1, end = 4)) |> 
+  mutate(quarter = str_sub(x_2, start = 5, end = 6)) |> 
+  select(-x_2) 
+  
+```
+For the population growth variable, I will choose the values of growth only for the first quarter of the year. All variables in the analysis will be per year so no reason to have growth per quarter.
+
+```{r}
+popgrowth_prep2 <- popgrowth_prep |> 
+  filter(quarter == "K1") |> 
+  mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
+  mutate(popgrowth = as.numeric(as.character(popgrowth)))
+```
+No missing values in the population growth
+
+
+## Municipalities' population
+```{r}
+pop <- read_excel(here("prep", "raw_data", "Folkemengde.xlsx"),
+                         range = "A3:S90",
+        .name_repair = ~janitor::make_clean_names(.)
+          )
+
+pop_prep <- pop |> 
+  select(c(2:16)) |> 
+  separate(x_2, into = c("municip_number", "municip"), sep = " ") |> 
+  mutate_at(.vars = c(3:16), as.numeric) |> 
+  pivot_longer(cols = c(3:16)) |> 
+  mutate(year = str_extract_all(name, "[:digit:]{4}")
+         ) 
+
+
+pop_prep2 <- pop_prep |> 
+  select(-name) |> 
+  rename(population = value) |> 
+  mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
+  mutate(population = as.numeric(as.character(population)))
+
+  
+```
+No NAs in the municipalities' population values
+
+
+## Unemployment
+
+Here the data is per month, but we need just one value per uear. Similar to population growth, I will use the data for January only
+
+```{r}
+unemp <- read_excel(here("prep", "raw_data", "arbeidsledige.xlsx"),
+                         range = "A3:D11139",
+        .name_repair = ~janitor::make_clean_names(.)
+          )
+
+unemp_prep <- unemp |> 
+  fill(x) |> 
+  select(-x_2) |> 
+  separate(x, into = c("municip_number", "municip"), sep = " ") |> 
+  mutate(year = str_sub(x_3, start = 1, end = 4)) |> 
+  mutate(month = str_sub(x_3, start = 5, end = 7)) |> 
+  select(-x_3) |> 
+  rename(unemployed = personer_registrert_helt_arbeidsledige) |> 
+  mutate_at(.vars = c("year", "municip_number"), as.numeric)
+```
+
+I see that in some cases, the unemployment values are available for selected months only. For instance, unemployment in Hammerfest was registered only for November in years 2015-2018. If I filter by the first month, I will get a lot of NA. Instead, I will use the value of the earliest month with the data, for instance, if the first unemployment record was in March - I will use March data instead of January.
+
+```{r, warning = FALSE}
+unemp_prep2 <- unemp_prep |> 
+  mutate(month_num = str_sub(month, start = 2, end = 3)) |> 
+  mutate(month_num = as.numeric(month_num)) |> 
+  select(-month) |> 
+  group_by(municip_number, municip, year) |> 
+  arrange(month_num) |> 
+  slice_head(n = 1) |> 
+  mutate(unemployed = as.numeric(as.character(unemployed)))
+```
+
+In the unemployment, there are still 95 missing values (also in the raw data). Not sure what caused them, but the SSB is the best source of data, if they recorded NA it is probably true lack of data.
+
+
+# Joining all the data into a single data set
+
+Just left-joining all the tables. Note that aquaculture production is in kg, so I divide it by 1000 to turn kg into tons
+```{r}
+spfood_data <- aqua_prep |> 
+  left_join(fish_prep, by = c("year", "municip_number")) |> 
+  select(-municip.y) |> 
+  rename(municip = municip.x) |> 
+  left_join(sea_prep[,c(1,2)], by = "municip_number") |> 
+  left_join(wageco_prep2[,-2], by = c("municip_number", "year")) |> 
+  left_join(pop_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
+  left_join(popgrowth_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
+  left_join(unemp_prep2[,c(1,3,4)], by = c("municip_number", "year"))
+```
+
+
+
+# Check how much data is missing per varialbe
+There are 862 observations in total. There are 133 observations, where total catch of fish is NA. These are municipality by year combination, where catches were not registered in a given municipality. In such cases, we can assume that fisheries production was zero.
+There are also 35 observations where unemployment data is not available. 
+```{r}
+map(spfood_data, ~ sum(is.na(.x)))
+```
+
+
+```{r}
+spfood_data_final <- spfood_data |> 
+  mutate(total_catch = replace(total_catch, 
+                               is.na(total_catch),
+                               0
+          )
+  ) 
+```
+
+
+# Save the final table
+```{r}
+write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+```
+
