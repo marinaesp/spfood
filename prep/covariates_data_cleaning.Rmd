@@ -50,7 +50,8 @@ fish_prep <- fish %>%
   rename(municip = municip_name_new,
          total_catch = total_catch_new) |> 
   group_by(year, municip, municip_number) |> 
-  summarize(total_catch = sum(total_catch, na.rm = T))
+  summarize(total_catch = sum(total_catch, na.rm = T)) |> 
+  filter(year >= 2005 & year <= 2019)
 
 ```
 
@@ -113,7 +114,7 @@ gator_prep2 <- gator_prep |>
 Next dataset is p90p10 index. I will rename this index to "wageco", for "wage coefficient". Source of the dataset:
 https://www.ssb.no/inntekt-og-forbruk/artikler-og-publikasjoner/slik-maler-ssb-ulikhet
 
-```{r}
+```{r, warning = F}
 wageco <- read_excel(here("prep", "raw_data", "gini_p10_wagescoeff.xlsx"),
                      range = "A4:AE91", 
                      .name_repair = ~janitor::make_clean_names(.))
@@ -282,6 +283,6 @@ spfood_data_final <- spfood_data |>
 
 # Save the final table
 ```{r}
-write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+#write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
 
