@@ -298,6 +298,7 @@ catch18_prep2 <-catch18_prep %>%
   mutate(Municip_number = replace(
     Municip_number, 
     Municip_name == "Bo", 1867)) %>%
+  mutate(Catch = str_replace_all(Catch, pattern = ",", replacement = ".")) %>%
   mutate(Catch = as.numeric(Catch)) %>% 
   mutate(English = replace(
     English, English %in% c(
