@@ -269,7 +269,7 @@ There are also 35 observations where unemployment data is not available.
 ```{r}
 map(spfood_data, ~ sum(is.na(.x)))
 ```
-
+Replace NA in total catch with zeros, replace negative aquaculture production with NA. Then,I also divide the aquaculture produciton by 1000 to convert kg to tons.
 
 ```{r}
 spfood_data_final <- spfood_data |> 
@@ -277,12 +277,18 @@ spfood_data_final <- spfood_data |>
                                is.na(total_catch),
                                0
           )
-  ) 
+  ) |> 
+  mutate(aqua_prod = ifelse(
+    aqua_prod < 0,
+    NA,
+    aqua_prod
+  )) |> 
+  mutate(aqua_prod = aqua_prod/1000)
 ```
 
 
 # Save the final table
 ```{r}
-#write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
 

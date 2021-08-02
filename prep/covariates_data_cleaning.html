@@ -11,7 +11,7 @@
 
 <meta name="author" content="Marina Espinasse" />
 
-<meta name="date" content="2021-07-30" />
+<meta name="date" content="2021-08-02" />
 
 <title>Preparing covariates for the analysis of seafood production</title>
 
@@ -252,7 +252,7 @@ pre code {
 
 <h1 class="title toc-ignore">Preparing covariates for the analysis of seafood production</h1>
 <h4 class="author">Marina Espinasse</h4>
-<h4 class="date">2021-07-30</h4>
+<h4 class="date">2021-08-02</h4>
 
 </div>
 
@@ -357,7 +357,7 @@ pre code {
 <span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">wageco =</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(wageco)))</span></code></pre></div>
 <p>7 missing values in the wage ratios data - those are all data from Harstad municipality</p>
 <div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">filter</span>(wageco_prep2, <span class="fu">is.na</span>(wageco))</span></code></pre></div>
-<pre><code>## # A tibble: 7 x 4
+<pre><code>## # A tibble: 7 × 4
 ##   municip_number municip wageco  year
 ##            &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt; &lt;dbl&gt;
 ## 1           1903 Harstad     NA  2005
@@ -500,16 +500,23 @@ pre code {
 ## 
 ## $unemployed
 ## [1] 35</code></pre>
+<p>Replace NA in total catch with zeros, replace negative aquaculture production with NA. Then,I also divide the aquaculture produciton by 1000 to convert kg to tons.</p>
 <div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final <span class="ot">&lt;-</span> spfood_data <span class="sc">|</span><span class="er">&gt;</span> </span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch =</span> <span class="fu">replace</span>(total_catch, </span>
 <span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">is.na</span>(total_catch),</span>
 <span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                               <span class="dv">0</span></span>
 <span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>          )</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  ) </span></code></pre></div>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod =</span> <span class="fu">ifelse</span>(</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    aqua_prod <span class="sc">&lt;</span> <span class="dv">0</span>,</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="cn">NA</span>,</span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    aqua_prod</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod =</span> aqua_prod<span class="sc">/</span><span class="dv">1000</span>)</span></code></pre></div>
 </div>
 <div id="save-the-final-table" class="section level1" number="6">
 <h1 number="6"><span class="header-section-number">6</span> Save the final table</h1>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;spfood_allvars.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(spfood_data_final, <span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;output_data&quot;</span>, <span class="st">&quot;spfood_allvars.csv&quot;</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
 </div>
 
 
