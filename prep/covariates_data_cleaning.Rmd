@@ -283,12 +283,13 @@ spfood_data_final <- spfood_data |>
     NA,
     aqua_prod
   )) |> 
-  mutate(aqua_prod = aqua_prod/1000)
+  mutate(aqua_prod = aqua_prod/1000) |> 
+  mutate(total_catch = total_catch/1000)
 ```
 
 
 # Save the final table
 ```{r}
-write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+#write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
 
