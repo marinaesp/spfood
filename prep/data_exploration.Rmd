@@ -1,0 +1,229 @@
+---
+title: "Exploring response and covariates data for seafood production model"
+author: "Marina Espinasse"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: '~/github/spfood/src/style.css'
+    toc: true
+    number_sections: true
+    theme: cerulean
+    highlight: haddock
+    includes: 
+      in_header: '~/github/spfood/src/spfood_banner.html'
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+source('~/github/spfood/src/common.R')
+source('~/github/spfood/src/HighstatLibV13.R')
+```
+
+Here I will run the exploration of the response variables (aquaculture production and fisheries production) and of the covariates
+
+```{r}
+library(vroom)
+library(here)
+library(lattice)
+library(cowplot)
+```
+# Load the data
+```{r}
+seafood <-read.csv(here("prep", "output_data", "spfood_allvars.csv"))
+```
+
+Calculate total sea food production here as well. I also create a log-transformed fisheries catch, because it is highly skewed to the left (see histograms below)
+
+```{r}
+seafood_prep <- seafood |> 
+  rowwise() |> 
+  mutate(totprod = sum(aqua_prod, total_catch, na.rm=T)) |> 
+  mutate(aqua_prop = aqua_prod/totprod) |> 
+  mutate(fish_catch_log = log(total_catch + 0.001)) |> 
+  mutate(aqua_prod_log = log(aqua_prod + 0.001))
+```
+
+
+
+# Data exploration
+I will use extensively the approaches and functions from the two Highland statistics ltd books:
+*  Mixed effects models and extensions in ecology with R. (2009).
+Zuur, AF, Ieno, EN, Walker, N, Saveliev, AA, and Smith, GM. Springer
+ 
+and 
+
+*  #Library files for courses provided by: Highland Statistics Ltd.
+Zuur, Alain F., and Elena N. Ieno. "Spatial, temporal and spatial-temporal ecological data analysis with r-inla. Volume II" Highland Statistics Ltd 1 (2019).
+
+Cleveland dotplots of the variables
+```{r}
+Mydotplot(seafood_prep[,c(5,6,8,9,10,11,12,13)])
+```
+We observe an excess of zeros or close-to-zero values in the population, population growth, unemployed, and total catch variables.
+
+Check the % of zeroes in the variables:
+
+```{r}
+zeros_prop <- function(x){ #x is a numerical vector
+  rows = sum(!is.na(x)) 
+  zeros = sum(x == 0, na.rm = T)
+  prop = zeros/rows
+  prop
+}
+```
+
+
+```{r}
+myvars <- seafood_prep[,c(5,6,7,8,9,10,11)]
+map(myvars, ~zeros_prop(.x))
+```
+
+Only fisheries has 15% of zeros, other variables do not suffer from zero inflation
+
+Check out the distribution of variables:
+```{r, results='hide',fig.keep='all'}
+varnames <- list("aquaculture", "fisheries", "p90/p10", "population", "population growth","unemployed", "seaarea")
+par(mfrow = c(2,4))
+hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+```
+
+Most of the variables are left-skewed, but fisheries may need to be transformed, or later, the response variable aquaculture/(aquaculture + fisheries) may need to be transformed.
+
+The boxplots of the variables, to check if there are outliers (formally): yes, since the variables are all left-skewed
+```{r, results='hide',fig.keep='all'}
+par(mfrow = c(2,4))
+map2(myvars,varnames, ~ boxplot(.x, main = .y, col = "seagreen", xlab = " "))
+```
+
+
+Let's take a look at the variable aqua_prop which is a proportion of aquaculture in the total seafood production and at the log of the fisheries catches
+```{r}
+par(mfrow=c(1,3))
+hist(seafood_prep$aqua_prop, main = "Aquaculture proportion", xlab = "", col = "orchid")
+hist(seafood_prep$fish_catch_log, main = "Log of fisheries catches", xlab = "", col = "orchid")
+hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = "", col = "orchid")
+```
+It is highly skewed to the right, a lot of values are well below 1. Should I transform this variable? Not sure yet.
+
+# Collinearity
+```{r}
+Mypairs(myvars)
+```
+Clear association is only seen for the population and growth, and between the number of unemployed and population growth (positive relationship in both cases).
+
+# Responses versus covariates
+
+##  Aquaculture proportion versus covariates
+```{r}
+MyX <- c("year", "sea_area", "wageco", "population", "popgrowth" , "unemployed")
+MyMultipanel.ggp2(Z = seafood_prep,
+                  varx = MyX,
+                  vary = "aqua_prop",
+                  ylab = "aquaculture % in seafood production",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+
+```
+
+No clear associations or patterns, but i need to consider transformation of a response variable.
+
+## Aquaculture production versus covariates
+What if aquaculture production alone would be used as a response variable? Let's see also if fisheries catch has anything to do with aquaculture produciton
+
+
+```{r}
+
+MyMultipanel.ggp2(Z = seafood_prep,
+                  varx = MyX,
+                  vary = "aqua_prod",
+                  ylab = "aquaculture production",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+```
+This looks more interesting! Relationships are close to linear, but for population and wage coefficient maybe not.
+
+## Fisheries catch versus aquaculture
+
+Might be interesting to examine their associations statistically
+```{r}
+fish_aqua <-ggplot(
+  data = seafood_prep,
+  mapping = aes(x = fish_catch_log, y = aqua_prod)) +
+  geom_point() +
+  geom_smooth()
+
+fish_aqua
+```
+
+## Fisheries production versus covariates
+```{r}
+
+MyMultipanel.ggp2(Z = seafood_prep,
+                  varx = MyX,
+                  vary = "fish_catch_log",
+                  ylab = "fisheries catch",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+```
+
+I will need to transform fisheries catch to log(catch) for the analysis
+
+
+## Aquaculture production versus log catch and other covariates
+
+```{r}
+MyX2 <- c("year", "sea_area", "wageco", "population", "popgrowth" , "unemployed", "fish_catch_log")
+MyMultipanel.ggp2(Z = seafood_prep,
+                  varx = MyX2,
+                  vary = "aqua_prod",
+                  ylab = "aquaculture production",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+
+```
+
+# Checking the distribution of responce variables per municipality
+
+Just to see if the distribution of fisheries and aquaculture production over years look very different when plotted per municipality.
+There is a clear increase in the production over years!
+```{r, fig.width=7, fig.height=7, warning = F}
+ggplot(data = seafood_prep) +
+  geom_point(mapping = aes(x = year, y =  aqua_prod), size = 0.5) +
+  geom_smooth(mapping = aes(x = year, y =  aqua_prod), size = 0.4) +
+  facet_wrap( municip ~ .) +
+  theme(
+    axis.text.x = element_text(size = 10, angle = 90)) +
+  theme_half_open() +
+  theme(legend.position = "none")
+```
+Same but for fisheries
+```{r, fig.width=7, fig.height=7, warning = F}
+ggplot(data = seafood_prep) +
+  geom_point(mapping = aes(x = year, y =  fish_catch_log), size = 0.5) +
+  geom_smooth(mapping = aes(x = year, y =  fish_catch_log), size = 0.4) +
+  facet_wrap( municip ~ .) +
+  theme(
+    axis.text.x = element_text(size = 10, angle = 90),
+    legend.position = "none") +
+  theme_half_open() 
+```
+# Verifying dependence in the response variables
+I am already quite sure that both responses will be temporally and spatially dependent. But to test for that formally, we can use an autocorrelation test:
+
+```{r}
+seafood_temp <- arrange(seafood_prep, year) 
+  acf(seafood_temp$aqua_prod, na.action = na.pass)
+
+```
+
+```{r}
+acf(seafood_temp$total_catch)
+```
+
+
