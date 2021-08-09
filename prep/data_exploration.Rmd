@@ -61,6 +61,8 @@ Cleveland dotplots of the variables
 ```{r}
 Mydotplot(seafood_prep[,c(5,6,8,9,10,11,12,13)])
 ```
+
+
 We observe an excess of zeros or close-to-zero values in the population, population growth, unemployed, and total catch variables.
 
 Check the % of zeroes in the variables:
@@ -105,12 +107,16 @@ hist(seafood_prep$aqua_prop, main = "Aquaculture proportion", xlab = "", col = "
 hist(seafood_prep$fish_catch_log, main = "Log of fisheries catches", xlab = "", col = "orchid")
 hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = "", col = "orchid")
 ```
+
+
 It is highly skewed to the right, a lot of values are well below 1. Should I transform this variable? Not sure yet.
 
 # Collinearity
 ```{r}
 Mypairs(myvars)
 ```
+
+
 Clear association is only seen for the population and growth, and between the number of unemployed and population growth (positive relationship in both cases).
 
 # Responses versus covariates
@@ -144,6 +150,8 @@ MyMultipanel.ggp2(Z = seafood_prep,
                   addRegressionLine = FALSE,
                   addHorizontalLine = FALSE) 
 ```
+
+
 This looks more interesting! Relationships are close to linear, but for population and wage coefficient maybe not.
 
 ## Fisheries catch versus aquaculture
@@ -192,27 +200,32 @@ MyMultipanel.ggp2(Z = seafood_prep,
 
 Just to see if the distribution of fisheries and aquaculture production over years look very different when plotted per municipality.
 There is a clear increase in the production over years!
-```{r, fig.width=7, fig.height=7, warning = F}
+```{r, fig.width=10, fig.height=7, warning = F}
 ggplot(data = seafood_prep) +
   geom_point(mapping = aes(x = year, y =  aqua_prod), size = 0.5) +
   geom_smooth(mapping = aes(x = year, y =  aqua_prod), size = 0.4) +
   facet_wrap( municip ~ .) +
   theme(
-    axis.text.x = element_text(size = 10, angle = 90)) +
-  theme_half_open() +
-  theme(legend.position = "none")
+    axis.text.x = element_text(size = 10, angle = 90),
+    legend.position = "none",
+    panel.background = element_rect(fill = "white")) 
 ```
+
+
 Same but for fisheries
-```{r, fig.width=7, fig.height=7, warning = F}
+```{r, fig.width=10, fig.height=7, warning = F}
 ggplot(data = seafood_prep) +
   geom_point(mapping = aes(x = year, y =  fish_catch_log), size = 0.5) +
   geom_smooth(mapping = aes(x = year, y =  fish_catch_log), size = 0.4) +
   facet_wrap( municip ~ .) +
   theme(
     axis.text.x = element_text(size = 10, angle = 90),
-    legend.position = "none") +
-  theme_half_open() 
+    legend.position = "none",
+    panel.background = element_rect(fill = "white"))
+  
 ```
+
+
 # Verifying dependence in the response variables
 I am already quite sure that both responses will be temporally and spatially dependent. But to test for that formally, we can use an autocorrelation test:
 
