@@ -18,7 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 $$
 \begin{equation}
-AQ_{i,j} = \beta_0 + + \beta_1x_{ij1} + \beta_2x_{ij2}+ \beta_3x_{ij3} + \beta_4x_{ij4} + \beta_5x_{ij5} + \epsilon_{ij} + u_i
+AQ_{i,j} = \beta_0 +  \beta_1EQ_{ij} + \beta_2POP_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij} + f(YR_i)  + \epsilon_{ij} + u_i
 \end{equation}
 $$
 $$
@@ -26,6 +26,34 @@ $$
 FI_{i,j} = \beta_0 + \beta_1x_{ij1} + \beta_2x_{ij2}+ \beta_3x_{ij3} + \beta_4x_{ij4} + \beta_5x_{ij5} + \epsilon_{ij} + u_i
 \end{equation}
 $$
+equality coefficient p90/p10, municipality’s population, population growth in each municipality, the number of unemployed each year (January), , sea area (km2) of a municipality, and year 
+
+
+
+*Notations for model parameters*
+
+
+
+$$p(y|\mathbf{\beta,\theta})$$
+
+$$\phi$$
+
+
+
+$$
+\begin{equation}
+\begin{align}
+\begin{split}
+u_i \\
+v_i \\
+\zeta\\
+\gamma_k \\
+\phi_k \\
+\sigma_{ik} 
+\end{split}
+\end{align}
+\end{equation}
+$$
 
 
 
@@ -33,3 +61,31 @@ $$
 
 
 
+
+$$
+\begin{equation}
+\begin{align}
+\begin{split}
+AQ_{i,j} = \beta_0 +  \\
+\beta_1EQ_{ij} + \\
+\beta_2POP_{ij}+ \\
+\beta_3GR_{ij} + \\
+\beta_4UN_{ij} + \\
+\beta_5AR_{ij} +
+f(YEAR_i)  + \epsilon_{ij} + u_i
+\end{split}
+\end{align}
+\end{equation}
+$$
+
+*Hyperparameters*
+
+$\frac{1}{\sigma_{u_i}}$
+
+$\frac{1}{\sigma_{v_i}}$
+
+$\frac{1}{\sigma_{\gamma_k}}$
+
+$\frac{1}{\sigma_{\phi_k}}$
+
+$\frac{1}{\sigma_{\delta_k}}$
