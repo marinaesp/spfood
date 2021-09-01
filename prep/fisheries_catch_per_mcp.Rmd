@@ -46,8 +46,9 @@ catch2018 <-read.csv("./raw_data/fangstdata_2018-2.csv", sep = ";")
 
 # Formatting 2018 catch data
 Source for 2018 data:
-https://www.fiskeridir.no/Tall-og-analyse/AApne-data/AApne-datasett/Fangstdata-koblet-med-fartoeydata
+https://www.fiskeridir.no/Tall-og-analyse/AApne-data/AApne-datasett/elektronisk-rapportering-ers
 
+NB! Unlike in the data for 1994-2017, 2018 catches are in kg, not in tons!
 ```{r}
 catch18_prep <- catch2018 %>% 
   filter(Kyst.hav..kode. == "8") %>% 
@@ -383,6 +384,7 @@ catch18_prep2 <-catch18_prep %>%
   select(Municip_number,Municip_name, English, Catch) 
 ```
 
+Multiply 2018 catches by 1000, to have them in tons
 ```{r}
 catch18_final <- catch18_prep2 %>% 
      group_by(Municip_number,Municip_name,English) %>% 
@@ -394,7 +396,8 @@ catch18_final <- catch18_prep2 %>%
        Municip_name,
        English,
        Total_catch
-     ))
+     )) |> 
+  mutate(Total_catch = Total_catch/1000)
 ```
 
 # Merge the 1994-2017 and 2018 data:
