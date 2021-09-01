@@ -39,10 +39,10 @@ Calculate total sea food production here as well. I also create a log-transforme
 ```{r}
 seafood_prep <- seafood |> 
   rowwise() |> 
-  mutate(totprod = sum(aqua_prod, total_catch, na.rm=T)) |> 
-  mutate(aqua_prop = aqua_prod/totprod) |> 
-  mutate(fish_catch_log = log(total_catch + 0.001)) |> 
-  mutate(aqua_prod_log = log(aqua_prod + 0.001))
+  mutate(totprod = sum(aqua_prod_ton, total_catch_ton, na.rm=T)) |> 
+  mutate(aqua_prop = aqua_prod_ton/totprod) |> 
+  mutate(fish_catch_log = log(total_catch_ton + 1)) |> 
+  mutate(aqua_prod_log = log(aqua_prod_ton + 1))
 ```
 
 
@@ -59,7 +59,7 @@ Zuur, Alain F., and Elena N. Ieno. "Spatial, temporal and spatial-temporal ecolo
 
 Cleveland dotplots of the variables
 ```{r}
-Mydotplot(seafood_prep[,c(5,6,8,9,10,11,12,13)])
+Mydotplot(seafood_prep[,c(7,8,9,10,11,12,13,14,15)])
 ```
 
 
@@ -78,7 +78,13 @@ zeros_prop <- function(x){ #x is a numerical vector
 
 
 ```{r}
-myvars <- seafood_prep[,c(5,6,7,8,9,10,11)]
+myvars <- seafood_prep[,c("aqua_prod_ton",
+                          "total_catch_ton",
+                          "population",
+                          "popgrowth",
+                          "sea_area",
+                          "unemployed",
+                          "wageco")]
 map(myvars, ~zeros_prop(.x))
 ```
 
@@ -86,7 +92,10 @@ Only fisheries has 15% of zeros, other variables do not suffer from zero inflati
 
 Check out the distribution of variables:
 ```{r, results='hide',fig.keep='all'}
-varnames <- list("aquaculture", "fisheries", "p90/p10", "population", "population growth","unemployed", "seaarea")
+varnames <- list("aquaculture", "fisheries", "population", "population growth",
+                 "sea area",
+                 "unemployed",
+                 "p90/p10")
 par(mfrow = c(2,4))
 hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 ```
@@ -109,7 +118,6 @@ hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = 
 ```
 
 
-It is highly skewed to the right, a lot of values are well below 1. Should I transform this variable? Not sure yet.
 
 # Collinearity
 ```{r}
@@ -144,7 +152,7 @@ What if aquaculture production alone would be used as a response variable? Let's
 
 MyMultipanel.ggp2(Z = seafood_prep,
                   varx = MyX,
-                  vary = "aqua_prod",
+                  vary = "aqua_prod_ton",
                   ylab = "aquaculture production",
                   addSmoother = TRUE,
                   addRegressionLine = FALSE,
@@ -160,7 +168,7 @@ Might be interesting to examine their associations statistically
 ```{r}
 fish_aqua <-ggplot(
   data = seafood_prep,
-  mapping = aes(x = fish_catch_log, y = aqua_prod)) +
+  mapping = aes(x = total_catch_ton, y = aqua_prod_ton)) +
   geom_point() +
   geom_smooth()
 
@@ -172,29 +180,15 @@ fish_aqua
 
 MyMultipanel.ggp2(Z = seafood_prep,
                   varx = MyX,
-                  vary = "fish_catch_log",
+                  vary = "total_catch_ton",
                   ylab = "fisheries catch",
                   addSmoother = TRUE,
                   addRegressionLine = FALSE,
                   addHorizontalLine = FALSE) 
 ```
 
-I will need to transform fisheries catch to log(catch) for the analysis
+I maybe will need to transform fisheries catch to log(catch) for the analysis
 
-
-## Aquaculture production versus log catch and other covariates
-
-```{r}
-MyX2 <- c("year", "sea_area", "wageco", "population", "popgrowth" , "unemployed", "fish_catch_log")
-MyMultipanel.ggp2(Z = seafood_prep,
-                  varx = MyX2,
-                  vary = "aqua_prod",
-                  ylab = "aquaculture production",
-                  addSmoother = TRUE,
-                  addRegressionLine = FALSE,
-                  addHorizontalLine = FALSE) 
-
-```
 
 # Checking the distribution of responce variables per municipality
 
@@ -202,8 +196,8 @@ Just to see if the distribution of fisheries and aquaculture production over yea
 There is a clear increase in the production over years!
 ```{r, fig.width=10, fig.height=7, warning = F}
 ggplot(data = seafood_prep) +
-  geom_point(mapping = aes(x = year, y =  aqua_prod), size = 0.5) +
-  geom_smooth(mapping = aes(x = year, y =  aqua_prod), size = 0.4) +
+  geom_point(mapping = aes(x = year, y =  aqua_prod_ton), size = 0.5) +
+  geom_smooth(mapping = aes(x = year, y =  aqua_prod_ton), size = 0.4) +
   facet_wrap( municip ~ .) +
   theme(
     axis.text.x = element_text(size = 10, angle = 90),
@@ -215,8 +209,8 @@ ggplot(data = seafood_prep) +
 Same but for fisheries
 ```{r, fig.width=10, fig.height=7, warning = F}
 ggplot(data = seafood_prep) +
-  geom_point(mapping = aes(x = year, y =  fish_catch_log), size = 0.5) +
-  geom_smooth(mapping = aes(x = year, y =  fish_catch_log), size = 0.4) +
+  geom_point(mapping = aes(x = year, y =  total_catch_ton), size = 0.5) +
+  geom_smooth(mapping = aes(x = year, y =  total_catch_ton), size = 0.4) +
   facet_wrap( municip ~ .) +
   theme(
     axis.text.x = element_text(size = 10, angle = 90),
@@ -231,12 +225,12 @@ I am already quite sure that both responses will be temporally and spatially dep
 
 ```{r}
 seafood_temp <- arrange(seafood_prep, year) 
-  acf(seafood_temp$aqua_prod, na.action = na.pass)
+  acf(seafood_temp$aqua_prod_ton, na.action = na.pass)
 
 ```
 
 ```{r}
-acf(seafood_temp$total_catch)
+acf(seafood_temp$total_catch_ton)
 ```
 
 
