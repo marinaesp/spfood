@@ -11,7 +11,7 @@
 
 <meta name="author" content="Marina Espinasse" />
 
-<meta name="date" content="2021-08-02" />
+<meta name="date" content="2021-09-02" />
 
 <title>Preparing covariates for the analysis of seafood production</title>
 
@@ -252,7 +252,7 @@ pre code {
 
 <h1 class="title toc-ignore">Preparing covariates for the analysis of seafood production</h1>
 <h4 class="author">Marina Espinasse</h4>
-<h4 class="date">2021-08-02</h4>
+<h4 class="date">2021-09-02</h4>
 
 </div>
 
@@ -271,7 +271,8 @@ pre code {
 </ul></li>
 <li><a href="#joining-all-the-data-into-a-single-data-set"><span class="toc-section-number">4</span> Joining all the data into a single data set</a></li>
 <li><a href="#check-how-much-data-is-missing-per-varialbe"><span class="toc-section-number">5</span> Check how much data is missing per varialbe</a></li>
-<li><a href="#save-the-final-table"><span class="toc-section-number">6</span> Save the final table</a></li>
+<li><a href="#filtering-municipalities-with-at-leat-10-years-of-data"><span class="toc-section-number">6</span> Filtering municipalities with at leat 10 years of data</a></li>
+<li><a href="#save-final-tables"><span class="toc-section-number">7</span> Save final tables</a></li>
 </ul>
 </div>
 
@@ -512,11 +513,22 @@ pre code {
 <span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="cn">NA</span>,</span>
 <span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    aqua_prod</span>
 <span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod =</span> aqua_prod<span class="sc">/</span><span class="dv">1000</span>)</span></code></pre></div>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod_ton =</span> aqua_prod<span class="sc">/</span><span class="dv">1000</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch_ton =</span> total_catch)</span></code></pre></div>
 </div>
-<div id="save-the-final-table" class="section level1" number="6">
-<h1 number="6"><span class="header-section-number">6</span> Save the final table</h1>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(spfood_data_final, <span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;output_data&quot;</span>, <span class="st">&quot;spfood_allvars.csv&quot;</span>), <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code></pre></div>
+<div id="filtering-municipalities-with-at-leat-10-years-of-data" class="section level1" number="6">
+<h1 number="6"><span class="header-section-number">6</span> Filtering municipalities with at leat 10 years of data</h1>
+<p>For the spatial-temporal analysis, I will need only the municipalities for which we have at least 10 years of data. We cannot account for temporal correlation wiht less than 10 years of data, or it would be a very poor model with misspecified parameters. Here is the dataset with 59 municipalities that had at least 10 years of data</p>
+<p>There are 817 observations left</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final_selected <span class="ot">&lt;-</span>spfood_data_final <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(municip) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">totobs =</span> <span class="fu">n</span>()) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(totobs <span class="sc">&gt;=</span> <span class="dv">10</span>)</span></code></pre></div>
+</div>
+<div id="save-final-tables" class="section level1" number="7">
+<h1 number="7"><span class="header-section-number">7</span> Save final tables</h1>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;spfood_allvars.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final_selected, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;mcp_59selected.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
 </div>
 
 

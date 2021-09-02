@@ -288,8 +288,28 @@ spfood_data_final <- spfood_data |>
 ```
 
 
-# Save the final table
+# Filtering municipalities with at leat 10 years of data
+
+For the spatial-temporal analysis, I will need only the municipalities for which we have at least 10 years of data. We cannot account for temporal correlation wiht less than 10 years of data, or it would be a very poor model with misspecified parameters. 
+Here is the dataset with 59 municipalities that had at least 10 years of data
+
+There are 817 observations left
+```{r}
+spfood_data_final_selected <-spfood_data_final |> 
+  dplyr::group_by(municip) |> 
+  dplyr::mutate(totobs = n()) |> 
+  filter(totobs >= 10)
+
+```
+
+
+# Save final tables
 ```{r}
 #write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
+
+```{r}
+#write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_59selected.csv"), row.names = FALSE)
+```
+
 
