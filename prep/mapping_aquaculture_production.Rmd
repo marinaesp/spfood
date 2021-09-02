@@ -1,5 +1,5 @@
 ---
-title: "Mapping fisheries  production"
+title: "Mapping aquaculture  production"
 author: "*Compiled on `r date()` by `r Sys.info()['user']`*"
 output: 
   html_document:
@@ -44,11 +44,8 @@ library(here)
 allkommuner <-readOGR(dsn = "/Users/marinaespinasse/github/nor-prep/prep/administrative/raw/shapefiles/NO_AdminOmrader")
 ```
 
-# Fisheries annual production data
-
-Loading production data  and also Norwegian names of municipalities (with special Norwegian characters).
-For the spfood paper I need only the municipalities that both had fisheries and aquaculture and that have at least 10 years of observations. I load the csv table with the 59 municipalities, 
-
+# Annual production data
+Loading production data for fisheries and also Norwegian names of municipalities (with special Norwegian characters)
 ```{r}
 komnames_norw <- read_excel(file.path("./raw_data/komlist_norw.xlsx"))
 seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
@@ -56,7 +53,7 @@ seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
 
 # Preparing mapping layers 
 
-Change the municipality number of Harstad to 1901, as it was before
+For the spfood paper I need only the municipalities that both had fisheries and aquaculture and that have at least 10 years of observations. I load the csv table with the 59 municipalities, and filter them from the ohikom
 
 ```{r}
 seafood_prep <- seafood %>% 
@@ -69,6 +66,7 @@ seafood_shapes <-allkommuner[allkommuner$KOMM %in% seafood_prep$Komnum,]
 ```
 
 
+Convert municipalities shapes to a sf object, load world data and municpalities polygons for plotting the borders later
 ```{r }
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
@@ -85,9 +83,11 @@ kommunersf_prep <- kommunersf %>%
 ## Preparing the data for year 2005
 
 ```{r }
-fishcatch05 <-filter(seafood, year == "2005")
+aqua05 <-filter(seafood, year == "2005")
 
-plot_fishcatch05_prep <- fishcatch05 %>% 
+plot_aqua05_prep <- aqua05 %>% 
+  # mutate(municip_number = as.double(municip_number)) %>% 
+  # filter(municip_number %in% spfoodkom_prep$municip_number) |> 
   left_join(
   kommunersf_prep, 
   by = c("municip_number"="KOMM")) %>% 
@@ -97,12 +97,13 @@ plot_fishcatch05_prep <- fishcatch05 %>%
 
 
 ## Preparing the data for year 2018
-I do all the same manipulations for catch in year 2018 as for year 2005. I calculate total catch of all species,
-and then join the catches table with a geometry of municipalities.
-```{r }
-fishcatch18 <-filter(seafood, year == "2018")
 
-plot_fishcatch18_prep <-  fishcatch18 %>% 
+```{r }
+aqua18 <-filter(seafood, year == "2018")
+
+plot_aqua18_prep <-  aqua18 %>% 
+  # mutate(municip_number = as.double(municip_number)) %>%
+  # filter(municip_number %in% spfoodkom_prep$municip_number) |> 
   left_join(
   kommunersf_prep, 
   by = c("municip_number"="KOMM")) %>% 
@@ -118,7 +119,7 @@ I also divide the catches by 1000 to have tons on the map.
 
 ```{r}
 
-intervals05 <-c(0, 8000, 16000, 24000, 32000,40000,46000)#intervals for year 2005 only
+intervals05 <-c(0, 6000, 12000, 18000, 24000, 32000)
 
 labels05 <- imap_chr(intervals05, function(., id){
   return(paste0(formatC(intervals05[id], format="f", big.mark="," , digits = 0),
@@ -131,9 +132,9 @@ labels05 <- imap_chr(intervals05, function(., id){
 labels05 <- labels05[1:length(labels05) - 1]
 
 
-plot_fishcatch05_prep2  <- plot_fishcatch05_prep %>% 
-  filter(!is.na(total_catch_ton)) %>% 
-  mutate(catch_quantiles = cut(total_catch_ton,
+plot_aqua05_prep2  <- plot_aqua05_prep %>% 
+  filter(!is.na(aqua_prod_ton)) %>% 
+  mutate(prod_quantiles = cut(aqua_prod_ton,
                                breaks = intervals05,
                                labels = labels05,
                                include.lowest = T)) 
@@ -143,8 +144,9 @@ plot_fishcatch05_prep2  <- plot_fishcatch05_prep %>%
 
 For adding municipalities names, we need centroids of each municipality's polygon.
 I will also remove the municipalities 1920 and 1919 because they are too small, and numbers don't fit, i'll add number manually afterwards.
+
 ```{r}
-komnames05 <- cbind(plot_fishcatch05_prep2,st_coordinates(st_centroid(plot_fishcatch05_prep2)))
+komnames05 <- cbind(plot_aqua05_prep2,st_coordinates(st_centroid(plot_aqua05_prep2)))
 komnames_prep05 <- filter(komnames05, !municip_number %in% c(1919, 1920))
 ```
 
@@ -163,7 +165,7 @@ addalpha <- function(colors, alpha=0.7) {
 ```
 
 ```{r}
-cols <-addalpha(brewer.pal(6,"Greens"))
+cols <-addalpha(brewer.pal(6,"Reds"))
 ```
 
 
@@ -183,8 +185,8 @@ base_map05 <- ggplot() +
         plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
   ) +
   geom_sf(
-    data = plot_fishcatch05_prep2,
-    mapping = aes(fill = catch_quantiles),
+    data = plot_aqua05_prep2,
+    mapping = aes(fill = prod_quantiles),
     color = "white",
     size = 0.2
   ) +
@@ -193,7 +195,7 @@ base_map05 <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
     values = cols,
-    name = "Fisheries catch ranges (ton)",
+    name = "Aquaculture yield ranges (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top"
@@ -218,13 +220,13 @@ main_map05
 ## 2018 map 
 Similarly, prepare municipalities numbers - only for those, that had registered catches in 2018.
 ```{r}
-komnames18 <- cbind(plot_fishcatch18_prep,st_coordinates(st_centroid(plot_fishcatch18_prep)))
+komnames18 <- cbind(plot_aqua18_prep,st_coordinates(st_centroid(plot_aqua18_prep)))
 komnames_prep18 <- filter(komnames18, !municip_number %in% c(1919, 1920))
 ```
 
 ```{r}
 
-intervals18 <-c(0, 8000, 16000, 24000, 32000)#intervals for year 2018 only
+intervals18 <-c(0, 6000, 12000, 18000, 24000, 32000)#intervals for year 2018 only
 
 labels18 <- imap_chr(intervals18, function(., id){
   return(paste0(formatC(intervals18[id], format="f", big.mark="," , digits = 0),
@@ -236,9 +238,9 @@ labels18 <- imap_chr(intervals18, function(., id){
 
 labels18 <- labels18[1:length(labels18) - 1]
 
-plot_fishcatch18_prep2  <- plot_fishcatch18_prep %>% 
-  filter(!is.na(total_catch_ton)) %>% 
-  mutate(catch_quantiles = cut(total_catch_ton,
+plot_aqua18_prep2  <- plot_aqua18_prep %>% 
+  filter(!is.na(aqua_prod_ton)) %>% 
+  mutate(prod_quantiles = cut(aqua_prod_ton,
                                breaks = intervals18,
                                labels = labels18,
                                include.lowest = T))
@@ -260,21 +262,21 @@ base_map18 <- ggplot() +
         plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
   ) +
   geom_sf(
-    data = plot_fishcatch18_prep2,
-    mapping = aes(fill = catch_quantiles),
+    data = plot_aqua18_prep2,
+    mapping = aes(fill = prod_quantiles),
     color = "white",
     size = 0.2,
-    show.legend = FALSE
+    show.legend = TRUE
   ) +
   
   coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
-    values = cols
-    # name = "Fisheries catch ranges, tons",
-    # guide = guide_legend(
-    #   keyheight = unit(8, units = "mm"),
-    #   title.position = "none"
+    values = cols,
+    name = "Aquaculture yield ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top")
     ) +
   labs(
     x = NULL,
@@ -295,7 +297,7 @@ library(patchwork)
 ```
 
 ```{r fig.height=5, fig.width=4, dpi = 400}
-grDevices::cairo_pdf("./figs/fisheries_catch_2005_2018.pdf", width = 10, height = 12, fallback_resolution = 300)
+grDevices::cairo_pdf("./figs/aquaculture_yield_2005_2018.pdf", width = 10, height = 12, fallback_resolution = 300)
 main_map05/main_map18
 ```
 
@@ -305,7 +307,7 @@ I will include this figure in the supplementary material
 
 Make seafood dataframe an sf object
 ```{r}
-plot_fishcatch_all <-  seafood %>% 
+plot_aqua_all <-  seafood %>% 
   # mutate(municip_number = as.double(municip_number)) %>%
   # filter(municip_number %in% spfoodkom_prep$municip_number) |> 
   left_join(
@@ -316,7 +318,7 @@ plot_fishcatch_all <-  seafood %>%
 
 Create intervals of total catch for all years, in the same way as for 2005 and 2018.
 ```{r}
-intervals <-c(0, 8000, 16000, 24000, 32000,40000, 48000, 56000, 61000) 
+intervals <-c(c(0, 4000, 8000, 12000, 16000, 20000, 24000, 28000, 32000)) 
 # 
 labels_all <- imap_chr(intervals, function(., id){
   return(paste0(formatC(intervals[id], format="f", big.mark="," , digits = 0),
@@ -328,16 +330,16 @@ labels_all <- imap_chr(intervals, function(., id){
 
 labels_all <- labels_all[1:length(labels_all) - 1]
 
-plot_fishcatch_all2  <- plot_fishcatch_all %>% 
-  filter(!is.na(total_catch_ton)) %>%
-  mutate(catch_quantiles = cut(total_catch_ton,
+plot_aqua_all2  <- plot_aqua_all %>% 
+  filter(!is.na(aqua_prod_ton)) %>%
+  mutate(prod_quantiles = cut(aqua_prod_ton,
                                breaks = intervals,
                                labels = labels_all,
                                include.lowest = T))
 ```
 
 ```{r}
-cols2 <-brewer.pal(8,"Greens")
+cols2 <-brewer.pal(8,"Reds")
 ```
 
 
@@ -359,8 +361,8 @@ base_map_all <- ggplot() +
         plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
   ) +
   geom_sf(
-    data = plot_fishcatch_all2,
-    mapping = aes(fill = catch_quantiles),
+    data = plot_aqua_all2,
+    mapping = aes(fill = prod_quantiles),
     color = "white",
     size = 0.2
   ) +
@@ -368,7 +370,7 @@ base_map_all <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
     values = cols2,
-    name = "Fisheries catch ranges (ton)",
+    name = "Aquaculture yield ranges (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top")) +
@@ -391,7 +393,7 @@ main_map_all
 ```{r, fig.width=10, fig.height=7}
  
 
-ggsave("./figs/fish_catch_all_years.tiff", main_map_all, width = 18, height = 16, dpi = 300)
+ggsave("./figs/aqua_yield_all_years.tiff", main_map_all, width = 18, height = 16, dpi = 300)
 
 ```
 
