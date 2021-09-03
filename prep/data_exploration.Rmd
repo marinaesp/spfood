@@ -100,6 +100,24 @@ par(mfrow = c(2,4))
 hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 ```
 
+## Historgrams of the 59 selected municipalities
+For the mixed models, I will use only 59 municipalities, that is, 817 out of 862 observations (that had at least 10 years of data). Let's see if historgamrs are differenct for these observations.
+
+```{r}
+mcp59 <- read_csv(here::here("prep", "output_data", "mcp_59selected.csv"))
+
+myvars59 <- mcp59[,c("aqua_prod_ton",
+                          "total_catch_ton",
+                          "population",
+                          "popgrowth",
+                          "sea_area",
+                          "unemployed",
+                          "wageco")]
+par(mfrow = c(2,4))
+hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+```
+
+
 Most of the variables are left-skewed, but fisheries may need to be transformed, or later, the response variable aquaculture/(aquaculture + fisheries) may need to be transformed.
 
 The boxplots of the variables, to check if there are outliers (formally): yes, since the variables are all left-skewed
