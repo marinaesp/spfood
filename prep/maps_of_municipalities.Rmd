@@ -127,7 +127,9 @@ ggsave(paste0("./figs/municipalities_map.pdf"), base_layer_mp, dpi = 300)
 ```
 
 ```{r}
+tiff(file = "./figs/norway_all_mcp.tiff",width = 7, height = 6, units = 'in', res = 300)
 plot(allkommuner, border = grey(0.5)) 
+dev.off()
 
 ```
 
