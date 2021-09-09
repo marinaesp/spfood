@@ -11,7 +11,7 @@
 
 <meta name="author" content="Marina Espinasse" />
 
-<meta name="date" content="2021-09-02" />
+<meta name="date" content="2021-09-09" />
 
 <title>Preparing covariates for the analysis of seafood production</title>
 
@@ -252,7 +252,7 @@ pre code {
 
 <h1 class="title toc-ignore">Preparing covariates for the analysis of seafood production</h1>
 <h4 class="author">Marina Espinasse</h4>
-<h4 class="date">2021-09-02</h4>
+<h4 class="date">2021-09-09</h4>
 
 </div>
 
@@ -265,9 +265,12 @@ pre code {
 </ul></li>
 <li><a href="#ssb-variables"><span class="toc-section-number">3</span> SSB variables</a>
 <ul>
-<li><a href="#population-growth"><span class="toc-section-number">3.1</span> Population growth</a></li>
-<li><a href="#municipalities-population"><span class="toc-section-number">3.2</span> Municipalities’ population</a></li>
-<li><a href="#unemployment"><span class="toc-section-number">3.3</span> Unemployment</a></li>
+<li><a href="#wage-coefficient"><span class="toc-section-number">3.1</span> Wage coefficient</a></li>
+<li><a href="#population-growth"><span class="toc-section-number">3.2</span> Population growth</a></li>
+<li><a href="#municipalities-population"><span class="toc-section-number">3.3</span> Municipalities’ population</a></li>
+<li><a href="#unemployment"><span class="toc-section-number">3.4</span> Unemployment</a></li>
+<li><a href="#workforce-among-15-74-years-old"><span class="toc-section-number">3.5</span> Workforce among 15-74 years old</a></li>
+<li><a href="#projection-on-the-coastline---geography-covariate"><span class="toc-section-number">3.6</span> Projection on the coastline - geography covariate</a></li>
 </ul></li>
 <li><a href="#joining-all-the-data-into-a-single-data-set"><span class="toc-section-number">4</span> Joining all the data into a single data set</a></li>
 <li><a href="#check-how-much-data-is-missing-per-varialbe"><span class="toc-section-number">5</span> Check how much data is missing per varialbe</a></li>
@@ -338,6 +341,13 @@ pre code {
 <span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">county =</span> fylke,</span>
 <span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">pop_growth =</span> poprate,</span>
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">unemp =</span> arb_led)</span></code></pre></div>
+</div>
+</div>
+<div id="ssb-variables" class="section level1" number="3">
+<h1 number="3"><span class="header-section-number">3</span> SSB variables</h1>
+<div id="wage-coefficient" class="section level2" number="3.1">
+<h2 number="3.1"><span class="header-section-number">3.1</span> Wage coefficient</h2>
+<p>On the meeting 8th of September, we decided to exclude wage coefficient from the analysis, because it cannot predict either fisheries or aquacutlure. I will keep the code for preparing wage coefficient, but will exclude it from the covariates final table.</p>
 <p>Next dataset is p90p10 index. I will rename this index to “wageco”, for “wage coefficient”. Source of the dataset: <a href="https://www.ssb.no/inntekt-og-forbruk/artikler-og-publikasjoner/slik-maler-ssb-ulikhet" class="uri">https://www.ssb.no/inntekt-og-forbruk/artikler-og-publikasjoner/slik-maler-ssb-ulikhet</a></p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>wageco <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;gini_p10_wagescoeff.xlsx&quot;</span>),</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">range =</span> <span class="st">&quot;A4:AE91&quot;</span>, </span>
@@ -369,15 +379,10 @@ pre code {
 ## 6           1903 Harstad     NA  2010
 ## 7           1903 Harstad     NA  2011</code></pre>
 </div>
-</div>
-<div id="ssb-variables" class="section level1" number="3">
-<h1 number="3"><span class="header-section-number">3</span> SSB variables</h1>
-<p>Variables are from: <a href="https://www.ssb.no/statbank/table/06913/tableViewLayout1/" class="uri">https://www.ssb.no/statbank/table/06913/tableViewLayout1/</a></p>
-<p><a href="https://www.ssb.no/statbank/table/01222/" class="uri">https://www.ssb.no/statbank/table/01222/</a></p>
-<p><a href="https://www.ssb.no/statbank/table/10594" class="uri">https://www.ssb.no/statbank/table/10594</a></p>
-<p>Other variables similar to Gator: population growth, unemployment, population of municipalities. Gator has too many missing observations: 275 out of 1044 for population growth, 174 for unemployment, and also 129 for population (not all years’ records present) Instead, I will use Statistics Norway data that seem to be complete (and are quality controlled)</p>
-<div id="population-growth" class="section level2" number="3.1">
-<h2 number="3.1"><span class="header-section-number">3.1</span> Population growth</h2>
+<div id="population-growth" class="section level2" number="3.2">
+<h2 number="3.2"><span class="header-section-number">3.2</span> Population growth</h2>
+<p>Population and growth: <a href="https://www.ssb.no/statbank/table/01222/" class="uri">https://www.ssb.no/statbank/table/01222/</a></p>
+<p>Gator has too many missing observations: 275 out of 1044 for population growth, 174 for unemployment, and also 129 for population (not all years’ records present). Instead, I will use Statistics Norway data that seem to be complete (and are quality controlled)</p>
 <div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>popgrowth <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;Folketilvekst10.xlsx&quot;</span>),</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">range =</span> <span class="st">&quot;A3:C5658&quot;</span>,</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">.name_repair =</span> <span class="sc">~</span>janitor<span class="sc">::</span><span class="fu">make_clean_names</span>(.)</span>
@@ -397,8 +402,8 @@ pre code {
 <span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">popgrowth =</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(popgrowth)))</span></code></pre></div>
 <p>No missing values in the population growth</p>
 </div>
-<div id="municipalities-population" class="section level2" number="3.2">
-<h2 number="3.2"><span class="header-section-number">3.2</span> Municipalities’ population</h2>
+<div id="municipalities-population" class="section level2" number="3.3">
+<h2 number="3.3"><span class="header-section-number">3.3</span> Municipalities’ population</h2>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pop <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;Folkemengde.xlsx&quot;</span>),</span>
 <span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">range =</span> <span class="st">&quot;A3:S90&quot;</span>,</span>
 <span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">.name_repair =</span> <span class="sc">~</span>janitor<span class="sc">::</span><span class="fu">make_clean_names</span>(.)</span>
@@ -420,8 +425,9 @@ pre code {
 <span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">population =</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(population)))</span></code></pre></div>
 <p>No NAs in the municipalities’ population values</p>
 </div>
-<div id="unemployment" class="section level2" number="3.3">
-<h2 number="3.3"><span class="header-section-number">3.3</span> Unemployment</h2>
+<div id="unemployment" class="section level2" number="3.4">
+<h2 number="3.4"><span class="header-section-number">3.4</span> Unemployment</h2>
+<p>Unemployed: <a href="https://www.ssb.no/statbank/table/10594" class="uri">https://www.ssb.no/statbank/table/10594</a></p>
 <p>Here the data is per month, but we need just one value per uear. Similar to population growth, I will use the data for January only</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>unemp <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;arbeidsledige.xlsx&quot;</span>),</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">range =</span> <span class="st">&quot;A3:D11139&quot;</span>,</span>
@@ -451,24 +457,62 @@ pre code {
 <span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">unemployed =</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(unemployed)))</span></code></pre></div>
 <p>In the unemployment, there are still 95 missing values (also in the raw data). Not sure what caused them, but the SSB is the best source of data, if they recorded NA it is probably true lack of data.</p>
 </div>
+<div id="workforce-among-15-74-years-old" class="section level2" number="3.5">
+<h2 number="3.5"><span class="header-section-number">3.5</span> Workforce among 15-74 years old</h2>
+<p>Percent in workforce: <a href="https://www.ssb.no/statbank/table/06445" class="uri">https://www.ssb.no/statbank/table/06445</a></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>wforce <span class="ot">&lt;-</span> <span class="fu">read_excel</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;Sysselsatte.xlsx&quot;</span>),</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>                         <span class="at">range =</span> <span class="st">&quot;A3:S90&quot;</span>,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">.name_repair =</span> <span class="sc">~</span>janitor<span class="sc">::</span><span class="fu">make_clean_names</span>(.)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>wforce_prep <span class="ot">&lt;-</span> wforce <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">c</span>(<span class="dv">2</span><span class="sc">:</span><span class="dv">18</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(x_3,x_4)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">separate</span>(x_2, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;municip&quot;</span>), <span class="at">sep =</span> <span class="st">&quot; &quot;</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate_at</span>(<span class="at">.vars =</span> <span class="fu">c</span>(<span class="dv">3</span><span class="sc">:</span><span class="dv">16</span>), as.numeric) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(<span class="dv">3</span><span class="sc">:</span><span class="dv">16</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">str_extract_all</span>(name, <span class="st">&quot;[:digit:]{4}&quot;</span>)</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>         ) </span></code></pre></div>
+<pre><code>## Warning: Expected 2 pieces. Additional pieces discarded in 53 rows [2, 8, 25,
+## 28, 29, 31, 32, 33, 40, 42, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, ...].</code></pre>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>wforce_prep2 <span class="ot">&lt;-</span> wforce_prep <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>name) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">percent_wforce =</span> value) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate_at</span>(<span class="at">.vars =</span> <span class="fu">c</span>(<span class="st">&quot;year&quot;</span>, <span class="st">&quot;municip_number&quot;</span>), as.numeric) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">percent_wforce =</span> <span class="fu">as.numeric</span>(<span class="fu">as.character</span>(percent_wforce)))</span></code></pre></div>
+</div>
+<div id="projection-on-the-coastline---geography-covariate" class="section level2" number="3.6">
+<h2 number="3.6"><span class="header-section-number">3.6</span> Projection on the coastline - geography covariate</h2>
+<p>This is a covariate we decided to add to the analysis on the meeting on 8th of September. It is ready made, and was calculated as: the projection of each municipality’s center on the line following Norwegian coast. Then, the distance from the southern-most point of the coastline (border with Sweden, in the south) to each projection point was calculated. The further north and north-east the municipality is located, the larger the distance from the start of the coastline.</p>
+<p>I will rand the distance from 1 to max, to have all covariates in a similar scale</p>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>geo <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="fu">here</span>(<span class="st">&quot;prep&quot;</span>, <span class="st">&quot;raw_data&quot;</span>, <span class="st">&quot;grunnlinje_midpoint_kom.csv&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>, <span class="at">skip =</span> <span class="dv">2</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>geo_prep <span class="ot">&lt;-</span>geo <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="fu">c</span>(KomNr,DistanceGrunnlinja.km.)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">municip_number =</span> KomNr,</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">distance =</span> DistanceGrunnlinja.km.) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">distance_rank =</span> <span class="fu">rank</span>(distance))</span></code></pre></div>
+</div>
 </div>
 <div id="joining-all-the-data-into-a-single-data-set" class="section level1" number="4">
 <h1 number="4"><span class="header-section-number">4</span> Joining all the data into a single data set</h1>
-<p>Just left-joining all the tables. Note that aquaculture production is in kg, so I divide it by 1000 to turn kg into tons</p>
-<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>spfood_data <span class="ot">&lt;-</span> aqua_prep <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(fish_prep, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;year&quot;</span>, <span class="st">&quot;municip_number&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>municip.y) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">municip =</span> municip.x) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(sea_prep[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>)], <span class="at">by =</span> <span class="st">&quot;municip_number&quot;</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(wageco_prep2[,<span class="sc">-</span><span class="dv">2</span>], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(pop_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(popgrowth_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(unemp_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>))</span></code></pre></div>
+<p>Just left-joining all the tables.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>spfood_data <span class="ot">&lt;-</span> aqua_prep <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(fish_prep, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;year&quot;</span>, <span class="st">&quot;municip_number&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>municip.y) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">municip =</span> municip.x) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(sea_prep[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">2</span>)], <span class="at">by =</span> <span class="st">&quot;municip_number&quot;</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">#left_join(wageco_prep2[,-2], by = c(&quot;municip_number&quot;, &quot;year&quot;)) |&gt; </span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(pop_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(popgrowth_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(unemp_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(wforce_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)],<span class="at">by=</span><span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_prep[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)],<span class="at">by=</span><span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>))</span></code></pre></div>
 </div>
 <div id="check-how-much-data-is-missing-per-varialbe" class="section level1" number="5">
 <h1 number="5"><span class="header-section-number">5</span> Check how much data is missing per varialbe</h1>
 <p>There are 862 observations in total. There are 133 observations, where total catch of fish is NA. These are municipality by year combination, where catches were not registered in a given municipality. In such cases, we can assume that fisheries production was zero. There are also 35 observations where unemployment data is not available.</p>
-<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(spfood_data, <span class="sc">~</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(.x)))</span></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(spfood_data, <span class="sc">~</span> <span class="fu">sum</span>(<span class="fu">is.na</span>(.x)))</span></code></pre></div>
 <pre><code>## $year
 ## [1] 0
 ## 
@@ -490,9 +534,6 @@ pre code {
 ## $sea_area
 ## [1] 0
 ## 
-## $wageco
-## [1] 7
-## 
 ## $population
 ## [1] 0
 ## 
@@ -500,35 +541,41 @@ pre code {
 ## [1] 0
 ## 
 ## $unemployed
-## [1] 35</code></pre>
-<p>Replace NA in total catch with zeros, replace negative aquaculture production with NA. Then,I also divide the aquaculture produciton by 1000 to convert kg to tons.</p>
-<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final <span class="ot">&lt;-</span> spfood_data <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch =</span> <span class="fu">replace</span>(total_catch, </span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">is.na</span>(total_catch),</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                               <span class="dv">0</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>          )</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod =</span> <span class="fu">ifelse</span>(</span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>    aqua_prod <span class="sc">&lt;</span> <span class="dv">0</span>,</span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>    <span class="cn">NA</span>,</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    aqua_prod</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod_ton =</span> aqua_prod<span class="sc">/</span><span class="dv">1000</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch_ton =</span> total_catch)</span></code></pre></div>
+## [1] 35
+## 
+## $percent_wforce
+## [1] 0
+## 
+## $distance_rank
+## [1] 0</code></pre>
+<p>Replace NA in total catch with zeros, replace negative aquaculture production with NA. Then,I also divide the aquaculture production by 1000 to convert kg to tons.</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final <span class="ot">&lt;-</span> spfood_data <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch =</span> <span class="fu">replace</span>(total_catch, </span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">is.na</span>(total_catch),</span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>                               <span class="dv">0</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>          )</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod =</span> <span class="fu">ifelse</span>(</span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    aqua_prod <span class="sc">&lt;</span> <span class="dv">0</span>,</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    <span class="cn">NA</span>,</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>    aqua_prod</span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">aqua_prod_ton =</span> aqua_prod<span class="sc">/</span><span class="dv">1000</span>) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_catch_ton =</span> total_catch)</span></code></pre></div>
 </div>
 <div id="filtering-municipalities-with-at-leat-10-years-of-data" class="section level1" number="6">
 <h1 number="6"><span class="header-section-number">6</span> Filtering municipalities with at leat 10 years of data</h1>
-<p>For the spatial-temporal analysis, I will need only the municipalities for which we have at least 10 years of data. We cannot account for temporal correlation wiht less than 10 years of data, or it would be a very poor model with misspecified parameters. Here is the dataset with 59 municipalities that had at least 10 years of data</p>
+<p>For the spatial-temporal analysis, I will need only the municipalities for which we have at least 10 years of data. We cannot account for temporal correlation with less than 10 years of data, or it would be a very poor model with misspecified parameters. Here is the dataset with 59 municipalities that had at least 10 years of data</p>
 <p>There are 817 observations left</p>
-<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final_selected <span class="ot">&lt;-</span>spfood_data_final <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(municip) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">totobs =</span> <span class="fu">n</span>()) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(totobs <span class="sc">&gt;=</span> <span class="dv">10</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>spfood_data_final_selected <span class="ot">&lt;-</span>spfood_data_final <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">group_by</span>(municip) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">totobs =</span> <span class="fu">n</span>()) <span class="sc">|</span><span class="er">&gt;</span> </span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(totobs <span class="sc">&gt;=</span> <span class="dv">10</span>)</span></code></pre></div>
 </div>
 <div id="save-final-tables" class="section level1" number="7">
 <h1 number="7"><span class="header-section-number">7</span> Save final tables</h1>
-<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;spfood_allvars.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
-<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final_selected, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;mcp_59selected.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;spfood_allvars.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="co">#write.csv(spfood_data_final_selected, here(&quot;prep&quot;, &quot;output_data&quot;, &quot;mcp_59selected.csv&quot;), row.names = FALSE)</span></span></code></pre></div>
 </div>
 
 
