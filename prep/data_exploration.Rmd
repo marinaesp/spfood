@@ -23,12 +23,13 @@ source('~/github/spfood/src/HighstatLibV13.R')
 
 Here I will run the exploration of the response variables (aquaculture production and fisheries production) and of the covariates
 
-```{r}
+```{r, message=F}
 library(vroom)
 library(here)
 library(lattice)
 library(cowplot)
 ```
+
 # Load the data
 ```{r}
 seafood <-read.csv(here("prep", "output_data", "spfood_allvars.csv"))
@@ -59,7 +60,7 @@ Zuur, Alain F., and Elena N. Ieno. "Spatial, temporal and spatial-temporal ecolo
 
 Cleveland dotplots of the variables
 ```{r}
-Mydotplot(seafood_prep[,c(7,8,9,10,11,12,13,14,15)])
+Mydotplot(seafood_prep[,c(7:14)])
 ```
 
 
@@ -80,11 +81,13 @@ zeros_prop <- function(x){ #x is a numerical vector
 ```{r}
 myvars <- seafood_prep[,c("aqua_prod_ton",
                           "total_catch_ton",
+                          "distance",
                           "population",
                           "popgrowth",
                           "sea_area",
-                          "unemployed",
-                          "wageco")]
+                          "percent_wforce",
+                          "unemployed"
+                          )]
 map(myvars, ~zeros_prop(.x))
 ```
 
@@ -92,12 +95,18 @@ Only fisheries has 15% of zeros, other variables do not suffer from zero inflati
 
 Check out the distribution of variables:
 ```{r, results='hide',fig.keep='all'}
-varnames <- list("aquaculture", "fisheries", "population", "population growth",
-                 "sea area",
-                 "unemployed",
-                 "p90/p10")
+varnames <- list("Aquaculture", 
+                  "Fisheries", 
+                 "Distance South to North",
+                 "Population", 
+                 "Population growth",
+                 "Sea area",
+                  "Percent in workforce",
+                 "Number of unemployed"  )
+
+
 par(mfrow = c(2,4))
-hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = "", cex.main=1.1))
 ```
 
 ## Historgrams of the 59 selected municipalities
@@ -108,11 +117,14 @@ mcp59 <- read_csv(here::here("prep", "output_data", "mcp_59selected.csv"))
 
 myvars59 <- mcp59[,c("aqua_prod_ton",
                           "total_catch_ton",
+                          "distance",
                           "population",
                           "popgrowth",
                           "sea_area",
-                          "unemployed",
-                          "wageco")]
+                        "percent_wforce",
+                          "unemployed")]
+
+
 par(mfrow = c(2,4))
 hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 ```
@@ -139,7 +151,7 @@ hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = 
 
 # Collinearity
 ```{r}
-Mypairs(myvars)
+Mypairs(myvars59)
 ```
 
 
@@ -149,7 +161,7 @@ Clear association is only seen for the population and growth, and between the nu
 
 ##  Aquaculture proportion versus covariates
 ```{r}
-MyX <- c("year", "sea_area", "wageco", "population", "popgrowth" , "unemployed")
+MyX <- c("year", "sea_area", "population", "popgrowth" , "unemployed", "distance", "percent_wforce")
 MyMultipanel.ggp2(Z = seafood_prep,
                   varx = MyX,
                   vary = "aqua_prop",
@@ -178,7 +190,7 @@ MyMultipanel.ggp2(Z = seafood_prep,
 ```
 
 
-This looks more interesting! Relationships are close to linear, but for population and wage coefficient maybe not.
+This looks more interesting! Relationships are close to linear, but this result include all municipalities, it might be different per municipality.
 
 ## Fisheries catch versus aquaculture
 

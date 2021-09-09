@@ -507,7 +507,7 @@ pre code {
 <span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(popgrowth_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
 <span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(unemp_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)], <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
 <span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(wforce_prep2[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>,<span class="dv">4</span>)],<span class="at">by=</span><span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>, <span class="st">&quot;year&quot;</span>)) <span class="sc">|</span><span class="er">&gt;</span> </span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_prep[,<span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>)],<span class="at">by=</span><span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>))</span></code></pre></div>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(geo_prep,<span class="at">by=</span><span class="fu">c</span>(<span class="st">&quot;municip_number&quot;</span>))</span></code></pre></div>
 </div>
 <div id="check-how-much-data-is-missing-per-varialbe" class="section level1" number="5">
 <h1 number="5"><span class="header-section-number">5</span> Check how much data is missing per varialbe</h1>
@@ -544,6 +544,9 @@ pre code {
 ## [1] 35
 ## 
 ## $percent_wforce
+## [1] 0
+## 
+## $distance
 ## [1] 0
 ## 
 ## $distance_rank

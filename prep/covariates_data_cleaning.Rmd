@@ -313,7 +313,7 @@ spfood_data <- aqua_prep |>
   left_join(popgrowth_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
   left_join(unemp_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
   left_join(wforce_prep2[,c(1,3,4)],by=c("municip_number", "year")) |> 
-  left_join(geo_prep[,c(1,3)],by=c("municip_number"))
+  left_join(geo_prep,by=c("municip_number"))
 ```
 
 
