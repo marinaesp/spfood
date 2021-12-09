@@ -28,6 +28,27 @@ FI_{i,j} = \beta_0 + \beta_1x_{ij1} + \beta_2x_{ij2}+ \beta_3x_{ij3} + \beta_4x_
 $$
 equality coefficient p90/p10, municipality’s population, population growth in each municipality, the number of unemployed each year (January), , sea area (km2) of a municipality, and year 
 
+\\
+
+*Models for updated parameters*
+\\
+
+Aquaculture
+$$
+\begin{equation}
+AQ_{i,j} = \beta_0 +  \beta_1WF_{ij} + \beta_2DI_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij} + f(YR_i)  + \epsilon_{ij} + u_i + v_i + \gamma_j + \phi_j + \sigma_{ij}
+\end{equation}
+$$
+
+
+\\
+Fisheries
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1WF_{ij} + \beta_2DI_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij} + f(YR_i)  + \epsilon_{ij} + u_i v_i + \gamma_j + \phi_j + \sigma_{ij}
+\end{equation}
+$$
 
 
 *Notations for model parameters*
@@ -80,12 +101,20 @@ $$
 
 *Hyperparameters*
 
-$\frac{1}{\sigma_{u_i}}$
+$\frac{1}{\sigma^2_{u_i}}$
 
-$\frac{1}{\sigma_{v_i}}$
+$\frac{1}{\sigma^2_{v_i}}$
 
-$\frac{1}{\sigma_{\gamma_k}}$
+$\frac{1}{\sigma^2_{\gamma_k}}$
 
-$\frac{1}{\sigma_{\phi_k}}$
+$\frac{1}{\sigma^2_{\phi_k}}$
 
-$\frac{1}{\sigma_{\delta_k}}$
+$\frac{1}{\sigma^2_{\delta_k}}$
+
+
+
+*Ohter things*
+
+$u_i|u_{j \ne i}$
+
+$\sigma^2_u$
