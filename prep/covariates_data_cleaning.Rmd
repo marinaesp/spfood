@@ -176,18 +176,27 @@ popgrowth_prep <- popgrowth |>
   select(-x_2) 
   
 ```
+
 For the population growth variable, I will choose the values of growth only for the first quarter of the year. All variables in the analysis will be per year so no reason to have growth per quarter.
+For Harstad, there are no data of population growth until year 2013. THere are zeros before but these should be NA, not zeroes! I will replace them with NA.
 
 ```{r}
 popgrowth_prep2 <- popgrowth_prep |> 
   filter(quarter == "K1") |> 
   mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
-  mutate(popgrowth = as.numeric(as.character(popgrowth)))
+  mutate(popgrowth = as.numeric(as.character(popgrowth))) |> 
+  mutate(popgrowth = ifelse(
+    municip_number == 1903 & year <= 2012,
+    NA,
+    popgrowth
+  ))
 ```
-No missing values in the population growth
+
 
 
 ## Municipalities' population
+
+Again, for Harstad, there are only zeros until year 2013, which should be NA, of course.
 ```{r}
 pop <- read_excel(here("prep", "raw_data", "Folkemengde.xlsx"),
                          range = "A3:S90",
@@ -207,7 +216,11 @@ pop_prep2 <- pop_prep |>
   select(-name) |> 
   rename(population = value) |> 
   mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
-  mutate(population = as.numeric(as.character(population)))
+  mutate(population = as.numeric(as.character(population))) |> 
+  mutate(population = ifelse(
+    municip_number == 1903 & year <= 2012,
+    NA,
+    population))
 
   
 ```
@@ -219,7 +232,7 @@ No NAs in the municipalities' population values
 Unemployed:
 https://www.ssb.no/statbank/table/10594 
 
-Here the data is per month, but we need just one value per uear. Similar to population growth, I will use the data for January only
+Here the data is per month, but we need just one value per year. Similar to population growth, I will use the data for January only
 
 ```{r}
 unemp <- read_excel(here("prep", "raw_data", "arbeidsledige.xlsx"),
@@ -253,10 +266,14 @@ unemp_prep2 <- unemp_prep |>
 
 In the unemployment, there are still 95 missing values (also in the raw data). Not sure what caused them, but the SSB is the best source of data, if they recorded NA it is probably true lack of data.
 
+For Harstad, here again there is no data until year 2012, but there are alread NA (it was different format for these values in Excel)
+
 ## Workforce among 15-74 years old 
 
 Percent in workforce:
 https://www.ssb.no/statbank/table/06445
+
+The data for Harstad only included years 2013 to 2018, there are zeroes for the years 2005 to 2013, i need to replace them with NA. Since these are the only zeroes of the data, i can just replace them with NA without specifying Harstad
 
 ```{r}
 wforce <- read_excel(here("prep", "raw_data", "Sysselsatte.xlsx"),
@@ -279,14 +296,22 @@ wforce_prep2 <- wforce_prep |>
   rename(percent_wforce = value) |> 
   mutate_at(.vars = c("year", "municip_number"), as.numeric) |> 
   mutate(percent_wforce = as.numeric(as.character(percent_wforce)))
+
+
+wforce_prep3 <- wforce_prep2 |> 
+  mutate(percent_wforce = ifelse(
+    percent_wforce == 0,
+    NA,
+    percent_wforce
+  ))
 ```
 
 ## Projection on the coastline - geography covariate
 
 This is a covariate we decided to add to the analysis on the meeting on 8th of September.
-It is ready made, and was calculated as: the projection of each municipality's center on the line following Norwegian coast. Then, the distance from the southern-most point of the coastline (border with Sweden, in the south) to each projection point was calculated. The further north and north-east the municipality is located, the larger the distance from the start of the coastline.
+It is ready-made, and was calculated as: the projection of each municipality's center on the line following Norwegian coast. Then, the distance from the southern-most point of the coastline (border with Sweden, in the south) to each projection point was calculated. The further north and north-east the municipality is located, the larger the distance from the start of the coastline.
 
-I will rand the distance from 1 to max, to have all covariates in a similar scale
+I will rank the distance from 1 to max, to have all covariates in a similar scale
 
 ```{r}
 geo <- read.csv(here("prep", "raw_data", "grunnlinje_midpoint_kom.csv"), sep = ";", skip = 2)
@@ -312,7 +337,7 @@ spfood_data <- aqua_prep |>
   left_join(pop_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
   left_join(popgrowth_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
   left_join(unemp_prep2[,c(1,3,4)], by = c("municip_number", "year")) |> 
-  left_join(wforce_prep2[,c(1,3,4)],by=c("municip_number", "year")) |> 
+  left_join(wforce_prep3[,c(1,3,4)],by=c("municip_number", "year")) |> 
   left_join(geo_prep,by=c("municip_number"))
 ```
 
@@ -360,11 +385,11 @@ spfood_data_final_selected <-spfood_data_final |>
 
 # Save final tables
 ```{r}
-#write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
 
 ```{r}
-#write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_59selected.csv"), row.names = FALSE)
+write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_59selected.csv"), row.names = FALSE)
 ```
 
 
