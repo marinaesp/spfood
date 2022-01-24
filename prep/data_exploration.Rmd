@@ -110,7 +110,7 @@ hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " "
 ```
 
 ## Historgrams of the 59 selected municipalities
-For the mixed models, I will use only 59 municipalities, that is, 817 out of 862 observations (that had at least 10 years of data). Let's see if historgamrs are differenct for these observations.
+For the mixed models, I will use only 59 municipalities, that is, 817 out of 862 observations (that had at least 10 years of data). Let's see if histograms are different for these observations.
 
 ```{r}
 mcp59 <- read_csv(here::here("prep", "output_data", "mcp_59selected.csv"))
@@ -128,6 +128,17 @@ myvars59 <- mcp59[,c("aqua_prod_ton",
 par(mfrow = c(2,4))
 hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 ```
+
+
+Save this hist for supplementary material:
+```{r}
+tiff(file = "./figs/histograms.tiff",width = 7, height = 6, units = 'in', res = 300)
+par(mfrow = c(2,4))
+hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+dev.off()
+```
+
+
 
 
 Most of the variables are left-skewed, but fisheries may need to be transformed, or later, the response variable aquaculture/(aquaculture + fisheries) may need to be transformed.
@@ -175,7 +186,7 @@ MyMultipanel.ggp2(Z = seafood_prep,
 No clear associations or patterns, but i need to consider transformation of a response variable.
 
 ## Aquaculture production versus covariates
-What if aquaculture production alone would be used as a response variable? Let's see also if fisheries catch has anything to do with aquaculture produciton
+What if aquaculture production alone would be used as a response variable? Let's see also if fisheries catch has anything to do with aquaculture production
 
 
 ```{r}
@@ -183,7 +194,7 @@ What if aquaculture production alone would be used as a response variable? Let's
 MyMultipanel.ggp2(Z = seafood_prep,
                   varx = MyX,
                   vary = "aqua_prod_ton",
-                  ylab = "aquaculture production",
+                  ylab = "Aquaculture production (ton)",
                   addSmoother = TRUE,
                   addRegressionLine = FALSE,
                   addHorizontalLine = FALSE) 
@@ -191,6 +202,40 @@ MyMultipanel.ggp2(Z = seafood_prep,
 
 
 This looks more interesting! Relationships are close to linear, but this result include all municipalities, it might be different per municipality.
+
+Now just make a nicer version of this plot. Also I use rank of the geographical distnace instead of distance. This plot is based on the selected municiplities (59) only
+
+```{r}
+mcp59_plots <- mcp59
+colnames(mcp59_plots) <- c("Year", "county",
+                            "municip_number", "municip",
+                            "aqua_prod", "total_catch",
+                            "Sea area", "Population",
+                            "Population growth", "Number of unemployed",
+                            "Percent in workforce", "Distance south-north",
+                            "Distance south-north (rank)", "aqua_prod_ton",
+                            "total_catch_ton", "totobs" )
+```
+
+
+```{r}
+
+MyX59 <- c("Year", "Sea area", "Population", "Population growth", "Number of unemployed",  "Percent in workforce", "Distance south-north (rank)")
+aqua_covs <- MyMultipanel.ggp2(Z = mcp59_plots,
+                  varx = MyX59,
+                  vary = "aqua_prod_ton",
+                  ylab = "Aquaculture production (ton)",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+```
+
+
+```{r}
+ggsave("./figs/aquaculture_n_covariates.pdf", aqua_covs, width = 12, height = 10, dpi = 300)
+```
+
+
 
 ## Fisheries catch versus aquaculture
 
@@ -200,10 +245,18 @@ fish_aqua <-ggplot(
   data = seafood_prep,
   mapping = aes(x = total_catch_ton, y = aqua_prod_ton)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() +
+  labs(x = "Fisheries catch (ton)",
+       y = "Aquaculture production (ton)")
 
 fish_aqua
 ```
+
+```{r}
+ggsave("./figs/fish_aqua.pdf", fish_aqua, width = 8, height = 7, dpi = 300)
+```
+
+
 
 ## Fisheries production versus covariates
 ```{r}
@@ -220,6 +273,21 @@ MyMultipanel.ggp2(Z = seafood_prep,
 I maybe will need to transform fisheries catch to log(catch) for the analysis
 
 
+And the plot for fisheries based on 59 municipalities
+```{r}
+fish_covs <- MyMultipanel.ggp2(Z = mcp59_plots,
+                  varx = MyX59,
+                  vary = "total_catch_ton",
+                  ylab = "Fisheries catch (ton)",
+                  addSmoother = TRUE,
+                  addRegressionLine = FALSE,
+                  addHorizontalLine = FALSE) 
+```
+
+
+```{r}
+ggsave("./figs/fisheries_n_covariates.pdf", fish_covs, width = 12, height = 10, dpi = 300)
+```
 # Checking the distribution of responce variables per municipality
 
 Just to see if the distribution of fisheries and aquaculture production over years look very different when plotted per municipality.
