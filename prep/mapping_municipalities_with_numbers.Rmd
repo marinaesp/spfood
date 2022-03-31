@@ -1,0 +1,151 @@
+---
+title: "Municipalities with numbers"
+author: "*Compiled on `r date()` by `r Sys.info()['user']`*"
+output: 
+  html_document:
+    css: '~/github/nor-prep/prep/templates/style.css'
+    toc: true
+    number_sections: true
+    theme: cerulean
+    highlight: haddock
+    includes: 
+      in_header: '~/github/nor-prep/prep/templates/norway_banner.html'
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    echo = TRUE)
+source('~/github/spfood/src/common.r')
+```
+
+```{r, message=F}
+library(mapdata)
+library(maptools)
+library(rgdal)
+library(rgeos)
+library(maps)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(here)
+```
+
+
+
+# Data prep
+## Municipalities shape files
+```{r}
+allkommuner <-readOGR(dsn = "~/github/nor-prep/prep/administrative/data/Study_Municipalities_Ocean_Area_Only.shp")
+```
+
+
+
+## 59 municipalities selected for inla models
+```{r}
+seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
+```
+
+
+Selected only 59 municipalities from the shape file
+
+```{r}
+selected_mcp <-allkommuner[allkommuner$rg_id %in% seafood$municip_number,] 
+```
+
+
+Make shapefile an sf dataframe
+```{r}
+selected_mcp_sf <-st_as_sf(selected_mcp)
+```
+
+```{r}
+library(rnaturalearth)
+library(rnaturalearthdata)
+```
+
+
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+```
+
+# Plotting the municipalities
+```{r}
+mcp <- ggplot() +
+geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+  theme(axis.text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12,  face = "bold", vjust = 3),
+        panel.background = element_rect(fill = "aliceblue") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")) +
+  geom_sf(
+    data = selected_mcp_sf,
+    fill = "gray84", alpha = 0.5,
+    color = "gray31",
+    size = 0.3
+  ) +
+   coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+   geom_sf_text(data=selected_mcp_sf, 
+                aes(label = rg_id), colour = "black", size = 3, fontface = "bold")
+
+ mcp 
+```
+
+
+Save the map
+```{r}
+ggsave(plot = mcp, file = "./figs/mcp_with_numbers.pdf", width = 10, height = 8, dpi= 300)
+```
+
+
+
+
+
+## Examples of lables and text on polygons
+
+https://yutani.rbind.io/post/geom-sf-text-and-geom-sf-label-are-coming/
+
+
+
+```{r}
+nc <- sf::st_read(system.file("shape/nc.shp", package = "sf"), quiet = TRUE)
+```
+
+```{r}
+p <- ggplot() +
+  geom_sf(data = nc, aes(fill = AREA)) 
+ p + geom_sf_text(aes(label = NAME), colour = "white") 
+```
+
+
+```{r}
+# use only first three elements
+nc3 <- nc[1:3, ]
+
+# choose a point on the surface of each geometry
+nc3_points <- sf::st_point_on_surface(nc3)
+
+# retrieve the coordinates
+nc3_coords <- as.data.frame(sf::st_coordinates(nc3_points))
+nc3_coords$NAME <- nc3$NAME
+
+ggplot() +
+  geom_sf(data = nc3, aes(fill = AREA)) +
+  geom_text(data = nc3_coords, aes(X, Y, label = NAME), colour = "white")
+```
+
+
+```{r}
+# texts and labels
+p <- ggplot(nc) +
+  geom_sf(aes(fill = AREA))
+
+p + geom_sf_text(aes(label = NAME), colour = "white")
+```
+

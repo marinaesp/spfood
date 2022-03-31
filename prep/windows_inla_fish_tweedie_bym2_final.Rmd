@@ -1,0 +1,1000 @@
+---
+title: "Spatial-temporal mixed models for fisheries data"
+author: "Marina Espinasse"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: '~/github/spfood/src/style.css'
+    toc: true
+    number_sections: true
+    theme: cerulean
+    highlight: haddock
+    includes: 
+      in_header: '~/github/spfood/src/spfood_banner.html'
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+16.03.2022
+I will rerun the models again, given the advises from Sigrunn (at today's meeting). 
+
+1)I will adjust the priors also for the temporal effects, using pc priors.
+2) I will increase the limit for pc prior for both spatial and temporal effect, allowing them to vary more.
+3) I will try to add random effects one by one, not all (iid and structured for time) at the same time.
+4) For time effect, i can try just the linear model
+5) 
+
+If running on Windows, use this path
+```{r  include=FALSE}
+source('X:/spfood/src/common.R')
+source('X:/spfood/src/HighstatLibV13.R')
+```
+
+
+
+
+```{r, message=FALSE, warning=FALSE}
+library(here)
+library(raster)
+library(lattice)
+library(rgdal)
+library(sp)
+library(spdep)
+library(INLA)
+library(mgcv)
+library(ggplot2)
+library(plyr)
+library(RColorBrewer)
+library(moments) 
+library(scales)
+library(MASS)
+```
+
+
+
+# Load the data
+
+Seafood and covariates data: 59 municipalities that produced fisheries or aquaculture, and had at least 10 years of data
+```{r}
+seafood <-read.csv(here::here("prep", "output_data", "mcp_59selected.csv"))
+```
+
+
+Load the shape file for municipalities. The shapes are in another repository called nor-prep
+```{r}
+seafood.shp <- readOGR("X:/nor-prep/prep/administrative/data/Study_Municipalities_Ocean_Area_Only.shp")
+```
+
+
+# Neigbours among selected 59 municipalities
+
+If we only use 59 municipalities instead of all 81, how does it affect the definition of neighbors? I refer to seafood_prep2 list of municipalities in the chunk number 16 above
+```{r}
+mcp <- unique(seafood$municip_number)
+seafood.shp.selected <-subset(seafood.shp, seafood.shp$rg_id %in% mcp)
+```
+
+Take a look at the neighbors - is there anyone without a neighbor?
+The function `poly2nb` construct a proximity matrix based on Queen's case (neighbors share a boundary point)
+```{r}
+seafood.nb.sel <- poly2nb(seafood.shp.selected, row.names = seafood.shp.selected$rg_id)
+seafood.nb.sel
+```
+
+
+```{r}
+plot(seafood.shp.selected, border = grey(0.5))   #Don't close the graph
+Coords <- coordinates(seafood.shp.selected)
+# Connect neighbours with a line
+plot(seafood.nb.sel, 
+     coords = Coords, 
+     add = TRUE,
+     pch = 16,
+     lwd = 1,
+     col = 2)
+```
+
+None of the municipalities are left without neighbors but some have only 1 neighbors - in the far north. Only 1 neighbor mean that the variance for spatially structured random component u_i (in the ICAR model) will be large, lack of information will be visible. Since there are also municipalities with less data (often), the model estimates for them will be more shrunkten to the overall mean (northern-Norway's mean).
+
+Save the neighbours plots
+```{r}
+tiff(file = "./figs/neighbours.tiff",width = 7, height = 6, units = 'in', res = 300)
+plot(seafood.shp.selected, border = grey(0.5))   #Don't close the graph
+Coords <- coordinates(seafood.shp.selected)
+# Connect neighbours with a line
+plot(seafood.nb.sel, 
+     coords = Coords, 
+     add = TRUE,
+     pch = 16,
+     lwd = 1,
+     col = 2)
+dev.off()
+```
+
+
+Convert the spatial object of neighbors to an inla-object again
+```{r}
+nb2INLA("seafood.graph.sel", seafood.nb.sel)
+seafood.inla.nb.sel <- inla.read.graph(filename = "seafood.graph.sel")
+
+#define the path to seafood.graph, and call it seafood.path
+seafood.sel.path <-paste(getwd(), "seafood.graph.sel", sep ="/")
+```
+
+
+Now we need to add a column ID to the seafood dataset. Then we also make a copy of the variable ID
+```{r}
+mp_id <- data.frame(
+  municip_number = seafood.shp.selected$rg_id,
+  ID = seq(1,length(seafood.shp.selected$rg_id))
+                        ) 
+
+seafood_prep <- seafood |> 
+  mutate(municip_number = as.character(as.numeric(municip_number))) |> 
+  left_join(
+  mp_id, by = "municip_number"
+) |> 
+  mutate(ID_1 = ID)
+```
+
+# Data preparation
+Standardize all the quantitative covariates.
+
+
+```{r}
+#Standardize the continuous covariates
+MyStd <- function(x) { (x - mean(x, na.rm=T)) / sd(x, na.rm = T)}
+
+seafood_prep2 <- seafood_prep |> 
+  mutate_at(vars(c("sea_area", "distance_rank", "percent_wforce", "population", "popgrowth", "aqua_prod_ton")), ~MyStd(.))
+```
+
+
+Add a copy of the variable Year,  we will need it for inla formulas
+```{r}
+seafood_prep2$year1 <-seafood_prep2$year - min(seafood_prep2$year) + 1
+seafood_prep2$year2 <-seafood_prep2$year - min(seafood_prep2$year) + 1
+```
+
+
+
+During data exploration, i noticed that some variables maybe collinear. Let's check their VIFs and decide which ones should go (population correlated highly with employment and population growth)
+```{r}
+corvif(seafood_prep2[,c(7:11,13,14)])
+```
+
+Let's remove population and recalculate VIFs:
+```{r}
+corvif(seafood_prep2[,c(7,9:11,13,14)])#better!
+```
+What if i also remove one of the variables - unemployed or workforce, they provide about the same information
+
+```{r}
+corvif(seafood_prep2[,c(7,9,11, 13,14)])
+```
+I see also that unemployment is strongly correlated with population growth, so let's I remove it.
+
+
+## Scaling the response data
+
+Take 1000 tons as fisheries catch measurements, instead of tons
+
+```{r}
+seafood_prep2$tot_catch_thstons <-seafood_prep2$total_catch_ton/1000 
+```
+
+
+
+# Testing interaction types and the presence of temporal trend
+
+##  PC priors for BYM2 model
+
+```{r}
+HyperBYM2 <- list(
+  prec = list(prior = "pc.prec", param = c(2 , 0.01)),
+  phi  = list(prior = "pc", param = c(0.5, 0.5)))
+```
+
+
+
+## Spatial-only model
+Convolution model assuming only spatial random effect with two components: a correlated structured spatial effect u_i and a random noise (iid) v_i
+```{r}
+form5 <- tot_catch_thstons ~ sea_area + percent_wforce + distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper = HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) 
+```
+
+
+
+```{r}
+M5 <-inla(formula = form5,
+          family = "tweedie",
+          data=seafood_prep2,
+     safe=T,
+	control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+	control.inla=list(int.strategy="eb"))
+```
+
+
+```{r}
+M5$dic$dic
+M5$waic$waic
+```
+
+
+Model runs without warnings, but returns negative DIC and WIC. 
+https://www.mrc-bsu.cam.ac.uk/wp-content/uploads/DIC-slides.pdf
+
+DIC can be negative when data likelihood is larger than 1 (in some occasiosn it is possible), so the deviance = -2logL, is negataive and logL is positive.
+
+
+### Spatial-temporal model without safe mode
+
+I will again call these model M6, but will add index ns (non-safe mode). For the same models run under  the safe mode i got errors, and running time was abnormally long. To check it, see the file for inla fisheries models of 16.03.2022.
+
+```{r}
+form6ns <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="rw2",
+    scale.model = TRUE) +
+  f(year2,
+    model = "iid") 
+```
+
+
+
+```{r}
+
+#Same as for model 6, i remove tolerance=0.000001 in the control.inla options)
+M6ns <-inla(formula = form6ns,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+    control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.inla=list(int.strategy="eb"))
+```
+
+
+Same model but now using pc priors also for hte temporal rw2 effect.
+
+```{r}
+form6ns.1 <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="rw2",
+    scale.model = TRUE,
+    hyper = list(prec = list(prior = "pc.prec", param = c(1 , 0.01)))) +
+  f(year2,
+    model = "iid") 
+```
+
+```{r}
+
+#Same as for model 6, i remove tolerance=0.000001 in the control.inla options)
+M6ns.1 <-inla(formula = form6ns.1,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+    control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.inla=list(int.strategy="eb"))
+```
+
+```{r}
+M6ns$dic$dic
+M6ns.1$dic$dic
+```
+
+I would prefer the model with pc prior for rw2, the difference in DIC is very small anyway.
+
+Let's test the model with only rw2 temporal effect
+```{r}
+form6ns.2 <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="rw2",
+    scale.model = TRUE,
+    hyper = list(prec = list(prior = "pc.prec", param = c(1 , 0.01)))) 
+```
+
+
+```{r}
+
+#Same as for model 6, i remove tolerance=0.000001 in the control.inla options)
+M6ns.2 <-inla(formula = form6ns.2,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+    control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.inla=list(int.strategy="eb"))
+```
+
+ i also test the model with a linear, intead of rw2 temporal effect
+
+```{r}
+form6ns.3 <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="rw1",
+    scale.model = TRUE,
+    hyper = list(prec = list(prior = "pc.prec", param = c(1 , 0.01)))) 
+```
+
+
+```{r}
+M6ns.3 <-inla(formula = form6ns.3,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+    control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.inla=list(int.strategy="eb"))
+```
+
+
+
+And finally, i also check if temporal effect can be just linear
+```{r}
+form6ns.4 <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="linear")
+```
+
+
+```{r}
+M6ns.4 <-inla(formula = form6ns.4,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+    control.compute = list(dic = TRUE,
+                           waic = TRUE),
+    control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+    control.inla=list(int.strategy="eb"))
+```
+
+
+```{r}
+M6ns$dic$dic
+M6ns.1$dic$dic
+M6ns.2$dic$dic
+M6ns.3$dic$dic
+M6ns.4$dic$dic
+```
+
+## Interaction model type 1
+Interaction between spatial v_i and temporal phi_j.
+
+```{r}
+seafood_prep2$id.year <- as.numeric(as.factor(paste(seafood_prep2$ID, seafood_prep2$year, sep = ".")))
+```
+
+
+```{r}
+form7 <-  tot_catch_thstons ~ sea_area + percent_wforce + distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(year1,
+    model="rw2",
+    scale.model = TRUE,
+    hyper = list(prec = list(prior = "pc.prec", param = c(1 , 0.01)))) +
+  f(year2,
+    model = "iid") +
+  f(id.year, model = "iid")
+```
+
+Same model but now using pc priors also for hte temporal rw2 effect.
+
+
+```{r}
+#i removed tolerance=0.000001 in the control.inla options)
+M7 <-inla(formula = form7,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+          control.compute = 
+            list(dic=TRUE,
+            waic=TRUE),
+          control.fixed =
+            list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+          control.inla = list(int.strategy="eb"))
+```
+
+
+
+
+```{r}
+M7$dic$dic
+
+```
+
+
+# Bernardinelli model
+
+In this model, we assume there is a global linear trend (as a fixed effect) and random deviations from it specific to each municipality.
+
+```{r}
+form8 <-  tot_catch_thstons ~ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton +
+  f(ID,
+    model = "bym2",
+    hyper=HyperBYM2,
+    graph = seafood.sel.path,
+    adjust.for.con.comp = TRUE,
+    scale.model = TRUE,
+    constr = TRUE) +
+  f(ID_1, year1,
+    model = "iid",
+    constr = TRUE) +
+   year2
+
+```
+
+
+```{r}
+M8 <-inla(formula = form8,
+          family = "tweedie",# scale = ,
+          data=seafood_prep2,
+          control.compute = 
+            list(dic=TRUE,
+            waic=TRUE,
+            cpo = TRUE),
+          control.fixed =
+            list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),
+          control.inla = list(int.strategy="eb"))
+```
+
+
+
+
+
+# Compare all models 
+```{r}
+dic  <- c(M5$dic$dic, M6ns.1$dic$dic, M6ns.2$dic$dic, M6ns.3$dic$dic,  M7$dic$dic, M8$dic$dic)   
+Z.out     <- cbind(dic)
+rownames(Z.out) <- c("Spatial-only",
+                      "No interaction: temporal rw2 and iid",  
+                     "No interaction: temporal rw2",
+                     "No interaction: temporal linear",
+                     "Interaction type 1" ,
+                     "Bernardinelli model"
+                    )
+Z.out
+```
+For fisheries we can conclude that Bernardinelli models is the bests, although the general trend is not importat and random deviation from it is only important for Oksnes municipality. But i can discuss it to some extent anyway and show a general negative trend.
+
+
+# Model diagnostics on model M8 Bernardinelli model
+
+## Fitted values and residuals
+
+Diagnostics for the model 8
+Extract fitted values and residuals, calculate Pearson (studentized) residuals and plot them. I look at the model 7 (interaction type 1) diagnostics
+```{r}
+# Get fitted values and residuals 
+N   <- nrow(seafood_prep2)                            #Sample size
+mu2 <- M8$summary.fitted.values[1:N,"mean"]  #Fitted values
+```
+
+Calculate Pearson residuals (studentized residuals). Here we assume they have a Gaussian distribution
+```{r}
+E2 <- (seafood_prep2$tot_catch_thstons - mu2)/sqrt(var(mu2))
+```
+
+Plot Pearson residuals versus fitted values and covariates
+
+```{r}
+par(mfrow=c(1,2))
+plot(x=mu2,
+     y = E2,
+     xlab = "Fitted values",
+     ylab = "Pearson residuals")
+abline(h=0, lty=2)
+
+plot(x=mu2,
+     y = seafood_prep2$tot_catch_thstons,
+     xlab = "Fitted values",
+     ylab = "Observed values")
+abline(h=0, lty=2)
+```
+
+I see that residuals are generally within 3 standard deviations but a few outliers can be spotted. The bulk of the standardized residuals is still witin 2SDs.
+
+```{r}
+res <-seafood_prep2$tot_catch_thstons - mu2
+plot(res)
+plot(E2)
+```
+
+Plot residuals versus covariates
+
+```{r}
+par(mfrow=c(2,3), cex.lab = 1.5)
+plot(x=seafood_prep2$sea_area,
+     y = E2,
+     xlab = "Sea area",
+     ylab = "Pearson residuals",
+     pch=19,
+     cex=0.6)
+
+plot(x=seafood_prep2$distance,
+     y = E2,
+     xlab = "Distance",
+     ylab = "Pearson residuals",
+     pch=19,
+     cex=0.6)
+
+
+plot(x=seafood_prep2$percent_wforce,
+     y = E2,
+     xlab = "Workforce",
+     ylab = "Pearson residuals",
+     pch=19,
+     cex=0.6)
+
+plot(x=seafood_prep2$aqua_prod_ton,
+     y = E2,
+     xlab = "Aquaculture production",
+     ylab = "Pearson residuals",
+     pch=19,
+     cex=0.6)
+
+plot(x=seafood_prep2$popgrowth,
+     y = E2,
+     xlab = "Population growth",
+     ylab = "Pearson residuals",
+     pch=20,
+     cex=0.6)
+```
+
+
+
+ sea_area + percent_wforce +distance_rank + popgrowth + aqua_prod_ton
+
+
+```{r}
+plot_diag <- cbind(seafood_prep2, E2)
+diag1 <- ggplot(data=plot_diag) +
+  geom_jitter(mapping=aes(x=sea_area, y=E2),color="gray17", size=2, alpha=0.5) +
+  geom_smooth(mapping=aes(x=sea_area, y=E2), size=1.4) +
+  labs(
+    x="Sea area",
+    y="Pearson residulas"
+  ) +
+   theme_bw() +
+  theme(axis.title = element_text(size = 15),
+        axis.text = element_text(size = 12)) 
+ 
+
+
+diag2 <- ggplot(data=plot_diag) +
+  geom_jitter(mapping=aes(x=distance, y=E2),color="gray17", size=2, alpha=0.5) +
+  geom_smooth(mapping=aes(x=distance, y=E2), size=1.4) +
+  labs(
+    x="Distance South to North",
+    y=""
+  ) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 15),
+         axis.text.x = element_text(size = 12),
+        axis.text.y = element_blank()) 
+  
+
+
+diag3 <- ggplot(data=plot_diag) +
+  geom_jitter(mapping=aes(x=percent_wforce, y=E2),color="gray17", size=2, alpha=0.5) +
+  geom_smooth(mapping=aes(x=percent_wforce, y=E2), size=1.4) +
+  labs(
+    x="Percent in workforce",
+    y=""
+  ) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 15),
+        axis.text.y =element_blank(),
+        axis.text.x = element_text(size = 12)) 
+  
+
+diag4 <- ggplot(data=plot_diag) +
+  geom_jitter(mapping=aes(x=aqua_prod_ton, y=E2),color="gray17", size=2, alpha=0.5) +
+  geom_smooth(mapping=aes(x=aqua_prod_ton, y=E2), size=1.4) +
+  labs(
+    x="Aquaculture production",
+    y="Pearson residulas"
+  ) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 15),
+         axis.text = element_text(size = 12)) 
+
+
+
+
+diag5 <- ggplot(data=plot_diag) +
+  geom_jitter(mapping=aes(x=popgrowth, y=E2),color="gray17", size=2, alpha=0.5) +
+  geom_smooth(mapping=aes(x=popgrowth, y=E2), size=1.4) +
+  labs(
+    x="Population growth",
+    y=""
+  ) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 15),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 12)) 
+  
+
+```
+
+
+
+```{r}
+library(patchwork)
+grDevices::cairo_pdf("./figs/fish_model_diagnostic.pdf", width = 16, height = 12, fallback_resolution = 300)
+diag1 + diag2 + diag3 + diag4 + diag5 + plot_layout(ncol = 3, nrow=2, byrow = T)
+```
+
+
+
+
+# Model M8 intepretation
+
+# Spatial random effects
+
+Extract random effects per municipality
+
+```{r}
+# Random spatial effects:
+M8$summary.random$ID
+# The first 59 rows:  v_i +   u_i 
+# The next 59  rows: u_i
+vi_Plus_ui <- M8$summary.random$ID[1:59,"mean"]
+ui <- M8$summary.random$ID[60:118,"mean"]
+```
+
+
+Calculate how many spatial effects uv were not important (had zero in their posterior density)
+```{r}
+
+uv_df <- M8$summary.random$ID
+
+uv_foo <- uv_df |> dplyr::filter(ID >= 1 & ID < 60) 
+colnames(uv_foo) <- c("ID", "mean", "sd", "low", "mid" ,  "up", "mode","kld" )
+
+uv_foo <- uv_foo |> 
+  dplyr::mutate(low_cat = ifelse(low < 0, -1, 0)) |> 
+  dplyr::mutate(up_cat = ifelse(up > 0, 1, 0)) |>
+  rowwise() |>
+  dplyr::mutate(sum_cat = sum(low_cat, up_cat)) 
+
+uv_foo2 <- filter(uv_foo,sum_cat == 0)
+
+nrow(uv_foo2)
+```
+44 municipalities did not have spatial random effect important, or different from 0. That means that there are only 59-44 = 15 municipalities that are "real" outliers from the mean regional production of fisheries, over all years.
+
+## Temporal effects
+
+In the model M8, there are 2 temporal components - the overall linear (strictly linear) trend and a differential trend.
+Let's first plot the overall linear trend, however we don't have enough evidence that it's different from zero.
+
+The temporal trend slope is -0.038, CT : -0.071, -0.005
+```{r}
+x <-c(1:14)
+#upper point of trend  - 14*(-0.038) = -0.532
+y <- x*(-0.038)
+plot(x,y, type = "l", ylim=c(-1,0), lwd = 2, cex.lab=1.2, mgp = c(2.5, 1, 0),
+     xlab = "t", 
+     ylab=expression(paste(beta*t)))
+lines(x, x*(-0.071), lty=2)
+lines(x, x*(-0.005), lty=2)
+```
+Save this grapth
+```{r}
+tiff(file = "./figs/temporal_trend.tiff",width = 7, height = 6, units = 'in', res = 300)
+###############
+x <-c(1:14)
+#upper point of trend  - 14*(-0.038) = -0.532
+y <- x*(-0.038)
+plot(x,y, type = "l", ylim=c(-1,0), lwd = 2, cex.lab=1.2, mgp = c(2.5, 1, 0),
+     xlab = "t", 
+     ylab=expression(paste(beta*t)))
+lines(x, x*(-0.071), lty=2)
+lines(x, x*(-0.005), lty=2)
+#####################
+dev.off()
+```
+
+
+Calculate how many differential trendswere not important (had zero in their posterior density)
+```{r}
+
+delta_foo <- M8$summary.random$ID_1
+
+colnames(delta_foo) <- c("ID", "mean", "sd", "low", "mid" ,  "up", "mode","kld" )
+
+delta_foo <- delta_foo |> 
+  dplyr::mutate(low_cat = ifelse(low < 0, -1, 0)) |> 
+  dplyr::mutate(up_cat = ifelse(up > 0, 1, 0)) |>
+  rowwise() |>
+  dplyr::mutate(sum_cat = sum(low_cat, up_cat)) 
+ 
+
+delta_foo2 <- filter(delta_foo,sum_cat == 0)
+
+nrow(delta_foo2)
+```
+
+Only for 2 municipalities the differential trend was non-zero (these are Oksnes (ID 18) and Bodo (ID 27))
+
+## Regression parameters (fixed effects)
+```{r}
+# Regression parameters
+Betas <- M8$summary.fixed[, c("mean", "0.025quant",  "0.975quant")] 
+print(Betas, digits = 3)
+```
+
+Only sea area has an effect that is non-zero, the effect on produciton is positive (as would be expected)
+
+# Plot the spatial random effects 
+
+```{r}
+# Plot the spatial random effects u_i and v_i (they are not identified separately)
+# Add the posterior mean of the u_i and v_i  to the shape file
+seafood.shp.selected$uv.pm   <- M8$summary.random$ID[1:59,"mean"]
+seafood.shp.selected$uv.selo <- M8$summary.random$ID[1:59,"0.025quant"]
+seafood.shp.selected$uv.seup <- M8$summary.random$ID[1:59,"0.975quant"]
+seafood.shp.selected$uv_signif <- uv_foo$sum_cat
+
+
+# Convert the shapefile into an sf object.
+#map <- merge(Illi.shp, Torn)
+mapsf <- st_as_sf(seafood.shp.selected)
+
+# And make a ggplot2 graph of the u_i
+p <- ggplot()
+p <- p + geom_sf(data = mapsf, aes(fill = uv.pm)) 
+p <- p + scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red",
+                              name = "Spatial random effects") 
+p <- p + theme_bw()
+p
+
+```
+Save the map
+```{r}
+#ggsave(plot = p, file = "./figs/uv_spatial_effects.pdf", width = 10, height = 8, dpi= 300)
+```
+
+Another version of this map, with polygons of municipalities over the land
+
+
+```{r}
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+```
+
+
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+```
+
+
+```{r}
+vu_plot2 <- ggplot() +
+geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+  theme(axis.text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12,  face = "bold", vjust = 3),
+        panel.background = element_rect(fill = "aliceblue") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")) +
+  geom_sf(
+    data = mapsf,
+    mapping = aes(fill = uv.pm),
+    color = "gray31",
+    size = 0.2
+  ) +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red",
+                              name = "Spatial random effects") 
+  
+
+vu_plot3 <- vu_plot2 +
+  geom_sf(data = mapsf[mapsf$uv_signif != 0,],
+               size = 1.5,
+          mapping = aes(fill = uv.pm),
+          color = "gray45") +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE)
+
+vu_plot3
+
+```
+
+
+Save the map
+```{r}
+ggsave(plot = vu_plot3, file = "./figs/uv_spatial_effects2.pdf", width = 10, height = 8, dpi= 300)
+```
+
+
+# Plot temporal differential trends per municipality
+
+```{r}
+seafood.shp.selected2 <-seafood.shp.selected
+
+seafood.shp.selected2$delta   <- M8$summary.random$ID_1[,"mean"]
+seafood.shp.selected2$delta.selo <- M8$summary.random$ID_1[,"0.025quant"]
+seafood.shp.selected2$delta.seup <- M8$summary.random$ID_1[,"0.975quant"]
+seafood.shp.selected2$delta_signif <- delta_foo$sum_cat
+
+mapsf2 <- st_as_sf(seafood.shp.selected2)
+
+```
+
+
+```{r}
+delta_plot <- ggplot() +
+geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+  theme(axis.text = element_text(size = 15),
+        legend.text = element_text(size = 12),
+        legend.title = element_text(size = 12,  face = "bold", vjust = 3),
+        panel.background = element_rect(fill = "aliceblue") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")) +
+  geom_sf(
+    data = mapsf2,
+    mapping = aes(fill = delta),
+    color = "gray31",
+    size = 0.2
+  ) +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red",
+                              name = "Differential trend",
+                       n.breaks = 5) 
+  
+
+delta_plot2 <- delta_plot +
+  geom_sf(data = mapsf2[mapsf2$delta_signif != 0,],
+               size = 1.5,
+          mapping = aes(fill = delta),
+          color = "gray45") +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+   scale_fill_gradient2(midpoint = 0, low = "blue", mid = "white", high = "red",
+                              name = "Differential trend",
+                      limits = c(-0.13, 0.1),
+                      position = "bottom") 
+
+delta_plot2
+```
+
+
+Save the map
+```{r}
+ggsave(plot = delta_plot2, file = "./figs/differential_trend.pdf", width = 10, height = 8, dpi= 300)
+```
+
+
+
+
+
+# Calculate variances for the parameters
+
+We take the marginal desnities of the hyperparameters (in our case those are power parameter of the Tweedie distribution, dispersion parameter of the Tweedie, precision of the spatial random effect, precision for phi mixing parameter, and precision for the differential trend delta)
+```{r}
+tau_p <- M8$marginals.hyperpar$`p parameter for Tweedie`
+sigma_p <- inla.emarginal(function(x) (1/sqrt(x)), tau_p)
+
+tau_dispersion <- M8$marginals.hyperpar$`Dispersion parameter for Tweedie`
+sigma_dispersion <- inla.emarginal(function(x) (1/sqrt(x)), tau_dispersion)
+
+tau_uv <- M8$marginals.hyperpar$`Precision for ID`
+sigma_uv <- inla.emarginal(function(x) (1/sqrt(x)), tau_uv)
+
+tau_delta <- M8$marginals.hyperpar$`Precision for ID_1`
+sigma_delta <- inla.emarginal(function(x) (1/sqrt(x)), tau_delta)
+
+
+```
+
+Make a table of these variables
+```{r}
+sigmas <- tibble(parameter = c("p", "dispersion" , "uv", "delta"),
+                 sigma = c(sigma_p, sigma_dispersion, sigma_uv, sigma_delta))
+
+sigmas
+```
+
+# Obtaining HPD intervals for all parameters 
+
+```{r}
+hpd_fixed <- data.frame(rbind(
+                     inla.hpdmarginal(0.95, M8$marginals.fixed[[1]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[2]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[3]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[4]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[5]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[6]]),
+                 inla.hpdmarginal(0.95, M8$marginals.fixed[[7]])
+),
+parameter = names(M8$marginals.fixed))
+      
+
+
+remove_rownames(hpd_fixed)
+```
+```{r}
+hpd_hyper <- 
+  data.frame(rbind(
+     inla.hpdmarginal(0.95, M8$marginals.hyperpar[[1]]),
+     inla.hpdmarginal(0.95, M8$marginals.hyperpar[[2]]),
+     inla.hpdmarginal(0.95, M8$marginals.hyperpar[[3]]),
+     inla.hpdmarginal(0.95, M8$marginals.hyperpar[[4]]),
+     inla.hpdmarginal(0.95, M8$marginals.hyperpar[[5]])
+
+),
+parameter = names(M8$marginals.hyperpar))
+      
+
+
+remove_rownames(hpd_hyper)
+  
+```
+
+
+To get a marginal density of each random effect (u,v or delta interaction), type M8$marginals.random
+
+This will give you marginal densities of each spatial random effect u_i and then also v_i, and each differential trend delta_i.
+
