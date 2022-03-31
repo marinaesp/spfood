@@ -118,3 +118,72 @@ $\frac{1}{\sigma^2_{\delta_k}}$
 $u_i|u_{j \ne i}$
 
 $\sigma^2_u$
+
+
+
+
+
+# No interaction model
+
+
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1AR_{ij} + \beta_2WF_{ij}+ \beta_3DI_{ij} + \beta_4PG_{ij} + \beta_5AP_{ij}  + u_i+ v_i + \gamma^{RW2}_j + \phi_j 
+\end{equation}
+$$
+
+
+# Interaction 1 model
+
+All examples are for fisheries, i think i don't need to write all the same also for aquaculture
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1AR_{ij} + \beta_2WF_{ij}+ \beta_3DI_{ij} + \beta_4PG_{ij} + \beta_5AP_{ij}  + u_i+ v_i + \gamma^{RW2}_j + \phi_j + \sigma_{ij}
+\end{equation}
+$$
+
+
+
+# Spatial-temporal model with rw2
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1WF_{ij} + \beta_2DI_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij} + u_i+ v_i + \gamma^{RW2}_j 
+\end{equation}
+$$
+
+
+# Spatial model with linear trend
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1WF_{ij} + \beta_2DI_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij}  + u_i + v_i + \gamma^{Linear}_j
+\end{equation}
+$$
+
+
+
+# Bernardinelli model
+
+$$
+\begin{equation}
+FI_{i,j} = \beta_0 +  \beta_1WF_{ij} + \beta_2DI_{ij}+ \beta_3GR_{ij} + \beta_4UN_{ij} + \beta_5AR_{ij}   + u_i+ v_i +  (\beta_6 +\delta_i)YR  
+\end{equation}
+$$
+
+
+# Tweedie distribution
+$$
+\begin{equation}
+Y = \sum_{i=1}^{N}X_i
+\end{equation}
+$$
+## Other symbols
+
+$\beta t$
+
+$\beta$
+
+$\delta_i$

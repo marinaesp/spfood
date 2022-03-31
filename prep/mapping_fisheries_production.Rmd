@@ -384,6 +384,8 @@ base_map_all <- ggplot() +
 main_map_all <- base_map_all +
   geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'dimgray',  size = .2) 
 ```
+
+
 ```{r}
 main_map_all
 ```
