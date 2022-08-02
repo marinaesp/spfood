@@ -44,18 +44,31 @@ aqua_prep <- aqua %>%
 Fisheries data still includes catch per species, I will take a sum of all species catches, to get a total fisheries production in tons
 ```{r}
 fish <- read.csv(here("prep", "output_data", "catch_total_per_mcp.csv"))
+fish_coast <- read.csv(here("prep", "output_data", "catch_total_coastal_per_mcp.csv"))
+```
 
-fish_prep <- fish %>% 
-  clean_names(.) %>% 
-  rename(municip = municip_name_new,
-         total_catch = total_catch_new) |> 
-  group_by(year, municip, municip_number) |> 
-  summarize(total_catch = sum(total_catch, na.rm = T)) |> 
-  filter(year >= 2005 & year <= 2019)
+
+
+```{r}
+fish_coast_prep <-fish_coast |> 
+  rename(Total_catch_coastal = Total_catch_new)
 
 ```
 
 
+
+```{r}
+fish_prep <- fish %>% 
+  left_join(fish_coast_prep[,-5],
+            by = c("Year", "Municip_number", "Species")) %>% 
+  janitor::clean_names(.) %>% 
+  rename(municip = municip_name_new,
+         total_catch = total_catch_new) %>% 
+  group_by(year, municip, municip_number) %>% 
+  summarize(total_catch = sum(total_catch, na.rm = T),
+            total_catch_coast = sum(total_catch_coastal, na.rm=T)) %>% 
+  filter(year >= 2005 & year <= 2019)
+```
 
 Sea area of each municipality: I clean the data by removing covariates we don't need and renaming the others. Sea area data can be found at
 https://www.kartverket.no/til-lands/fakta-om-norge/storleiken-pa-landet
@@ -266,7 +279,7 @@ unemp_prep2 <- unemp_prep |>
 
 In the unemployment, there are still 95 missing values (also in the raw data). Not sure what caused them, but the SSB is the best source of data, if they recorded NA it is probably true lack of data.
 
-For Harstad, here again there is no data until year 2012, but there are alread NA (it was different format for these values in Excel)
+For Harstad, here again there is no data until year 2012, but there are already NA (it was different format for these values in Excel)
 
 ## Workforce among 15-74 years old 
 
@@ -329,8 +342,15 @@ geo_prep <-geo |>
 Just left-joining all the tables.
 ```{r}
 spfood_data <- aqua_prep |> 
-  left_join(fish_prep, by = c("year", "municip_number")) |> 
-  select(-municip.y) |> 
+  full_join(fish_prep, by = c("year", "municip_number")) |> 
+  mutate(municip.y = 
+           ifelse(is.na(municip.y),
+                  municip.x,
+                  municip.y)) |> 
+   mutate(municip.x = 
+           ifelse(is.na(municip.x),
+                  municip.y,
+                  municip.x)) |> 
   rename(municip = municip.x) |> 
   left_join(sea_prep[,c(1,2)], by = "municip_number") |> 
   #left_join(wageco_prep2[,-2], by = c("municip_number", "year")) |> 
@@ -344,12 +364,19 @@ spfood_data <- aqua_prep |>
 
 
 # Check how much data is missing per varialbe
-There are 862 observations in total. There are 133 observations, where total catch of fish is NA. These are municipality by year combination, where catches were not registered in a given municipality. In such cases, we can assume that fisheries production was zero.
-There are also 35 observations where unemployment data is not available. 
+There are 1064 observations in total. There are 133 observations, where total catch of fish is NA. These are municipality by year combination, where catches were not registered in a given municipality. In such cases, we can assume that fisheries production was zero.
+There are also 37 observations where unemployment data is not available. 
+202 observations of aquaculture are NA, these are municipality by year combinations that did not produce farmed fish.
 ```{r}
 map(spfood_data, ~ sum(is.na(.x)))
 ```
-Replace NA in total catch with zeros, replace negative aquaculture production with NA. Then,I also divide the aquaculture production by 1000 to convert kg to tons.  
+
+
+
+Replace NA in aquaculture production with zeroes but when the aquaculture production is negative - replace with NA.
+Then,I also divide the aquaculture production by 1000 to convert kg to tons.  
+
+25 observations of aquaculture produciton will be NA due to negative production values.
 
 ```{r}
 spfood_data_final <- spfood_data |> 
@@ -358,28 +385,49 @@ spfood_data_final <- spfood_data |>
                                0
           )
   ) |> 
+  
+  mutate(total_catch_coast = replace(total_catch_coast, 
+                               is.na(total_catch_coast),
+                               0
+          )
+  ) |> 
+  
+  mutate(aqua_prod = ifelse(
+    is.na(aqua_prod),
+    0,
+    aqua_prod)) |> 
+  
   mutate(aqua_prod = ifelse(
     aqua_prod < 0,
     NA,
     aqua_prod
   )) |> 
+  
   mutate(aqua_prod_ton = aqua_prod/1000) |> 
-  mutate(total_catch_ton = total_catch)
+  mutate(total_catch_ton = total_catch,
+         total_catch_ton_coast = total_catch_coast) |> 
+  select(-c(municip.y, aqua_prod, total_catch, total_catch_coast))
 ```
 
 
 # Filtering municipalities with at leat 10 years of data
 
 For the spatial-temporal analysis, I will need only the municipalities for which we have at least 10 years of data. We cannot account for temporal correlation with less than 10 years of data, or it would be a very poor model with misspecified parameters. 
-Here is the dataset with 59 municipalities that had at least 10 years of data
+Here is the dataset with 75 municipalities that had at least 10 years of data. But only 22 such observations will be left when we filter out municipalities with at least 10 years of data
 
 There are 817 observations left
 ```{r}
 spfood_data_final_selected <-spfood_data_final |> 
   dplyr::group_by(municip) |> 
   dplyr::mutate(totobs = n()) |> 
-  filter(totobs >= 10)
+  filter(totobs >= 10) |> 
+  select(-county)
 
+```
+
+Just to check again, how many NA in the dataset remain. NAs were replaced with zeroes where relevant, only unemployemnt has 37 NAs.
+```{r}
+map(spfood_data_final_selected, ~ sum(is.na(.x)))
 ```
 
 
@@ -389,7 +437,7 @@ write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), 
 ```
 
 ```{r}
-write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_59selected.csv"), row.names = FALSE)
+write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_75selected.csv"), row.names = FALSE)
 ```
 
 

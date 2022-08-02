@@ -109,14 +109,15 @@ par(mfrow = c(2,4))
 hist <- map2(myvars,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = "", cex.main=1.1))
 ```
 
-## Historgrams of the 59 selected municipalities
-For the mixed models, I will use only 59 municipalities, that is, 817 out of 862 observations (that had at least 10 years of data). Let's see if histograms are different for these observations.
+
+## Historgrams of the 75 selected municipalities
+For the mixed models, I will use only 75 municipalities, that is, 1040 (that had at least 10 years of data). Let's see if histograms are different for these observations. I exlcude total fisheries, focus only on coatal (they are very similar anyway)
 
 ```{r}
-mcp59 <- read_csv(here::here("prep", "output_data", "mcp_59selected.csv"))
+mcp75 <- read_csv(here::here("prep", "output_data", "mcp_75selected.csv"))
 
-myvars59 <- mcp59[,c("aqua_prod_ton",
-                          "total_catch_ton",
+myvars75 <- mcp75[,c("aqua_prod_ton",
+                         "total_catch_ton_coast",
                           "distance",
                           "population",
                           "popgrowth",
@@ -124,17 +125,26 @@ myvars59 <- mcp59[,c("aqua_prod_ton",
                         "percent_wforce",
                           "unemployed")]
 
+varnames75 <- list("Aquaculture", 
+                  "Fisheries (coastal)",
+                 "Distance South to North",
+                 "Population", 
+                 "Population growth",
+                 "Sea area",
+                  "Percent in workforce",
+                 "Number of unemployed"  )
+
 
 par(mfrow = c(2,4))
-hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+hist <- map2(myvars75,varnames75, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 ```
 
 
 Save this hist for supplementary material:
 ```{r}
-tiff(file = "./figs/histograms.tiff",width = 7, height = 6, units = 'in', res = 300)
+tiff(file = "./figs/histograms.tiff",width = 8, height = 6, units = 'in', res = 300)
 par(mfrow = c(2,4))
-hist <- map2(myvars59,varnames, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
+hist <- map2(myvars75,varnames75, ~ hist(.x, main = .y, col = "seagreen", xlab = " ", ylab = ""))
 dev.off()
 ```
 
@@ -145,12 +155,12 @@ Most of the variables are left-skewed, but fisheries may need to be transformed,
 
 The boxplots of the variables, to check if there are outliers (formally): yes, since the variables are all left-skewed
 ```{r, results='hide',fig.keep='all'}
-par(mfrow = c(2,4))
-map2(myvars,varnames, ~ boxplot(.x, main = .y, col = "seagreen", xlab = " "))
+par(mfrow = c(3,3))
+map2(myvars75,varnames75, ~ boxplot(.x, main = .y, col = "seagreen", xlab = " "))
 ```
 
 
-Let's take a look at the variable aqua_prop which is a proportion of aquaculture in the total seafood production and at the log of the fisheries catches
+Let's take a look at the variable aqua_prop which is a proportion of aquaculture in the total seafood production and at the log of the fisheries catches.  icheck this for all municipalities.
 ```{r}
 par(mfrow=c(1,3))
 hist(seafood_prep$aqua_prop, main = "Aquaculture proportion", xlab = "", col = "orchid")
@@ -162,7 +172,7 @@ hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = 
 
 # Collinearity
 ```{r}
-Mypairs(myvars59)
+Mypairs(myvars75)
 ```
 
 
@@ -206,28 +216,32 @@ This looks more interesting! Relationships are close to linear, but this result 
 Now just make a nicer version of this plot. Also I use rank of the geographical distnace instead of distance. This plot is based on the selected municiplities (59) only
 
 ```{r}
-mcp59_plots <- mcp59
-colnames(mcp59_plots) <- c("Year", "county",
-                            "municip_number", "municip",
-                            "aqua_prod", "total_catch",
-                            "Sea area", "Population",
-                            "Population growth", "Number of unemployed",
-                            "Percent in workforce", "Distance south-north",
-                            "Distance south-north (rank)", "aqua_prod_ton",
-                            "total_catch_ton", "totobs" )
+mcp75_plots <- mcp75
+colnames(mcp75_plots) <- c("Year", 
+                            "municip_number", "municip", "Sea area",
+                           "Population",
+                           "Population growth",
+                           "Number of unemployed",
+                           "Percent in workforce",
+                           "Distance south-north",
+                           "Distance south-north (rank)",
+                           "aqua_prod_ton",
+                           "total_catch",
+                           "Total coastal catch",
+                             "totobs" )
 ```
 
 
 ```{r}
 
-MyX59 <- c("Year", "Sea area", "Population", "Population growth", "Number of unemployed",  "Percent in workforce", "Distance south-north (rank)")
-aqua_covs <- MyMultipanel.ggp2(Z = mcp59_plots,
-                  varx = MyX59,
+MyX75 <- c("Year", "Sea area", "Population", "Population growth", "Number of unemployed",  "Percent in workforce", "Distance south-north (rank)")
+aqua_covs <- MyMultipanel.ggp2(Z = mcp75_plots,
+                  varx = MyX75,
                   vary = "aqua_prod_ton",
                   ylab = "Aquaculture production (ton)",
                   addSmoother = TRUE,
                   addRegressionLine = FALSE,
-                  addHorizontalLine = FALSE) 
+                  addHorizontalLine = FALSE)
 ```
 
 
@@ -252,6 +266,7 @@ fish_aqua <-ggplot(
 fish_aqua
 ```
 
+
 ```{r}
 ggsave("./figs/fish_aqua.pdf", fish_aqua, width = 8, height = 7, dpi = 300)
 ```
@@ -275,9 +290,9 @@ I maybe will need to transform fisheries catch to log(catch) for the analysis
 
 And the plot for fisheries based on 59 municipalities
 ```{r}
-fish_covs <- MyMultipanel.ggp2(Z = mcp59_plots,
-                  varx = MyX59,
-                  vary = "total_catch_ton",
+fish_covs <- MyMultipanel.ggp2(Z = mcp75_plots,
+                  varx = MyX75,
+                  vary = "Total coastal catch",
                   ylab = "Fisheries catch (ton)",
                   addSmoother = TRUE,
                   addRegressionLine = FALSE,
@@ -288,12 +303,14 @@ fish_covs <- MyMultipanel.ggp2(Z = mcp59_plots,
 ```{r}
 ggsave("./figs/fisheries_n_covariates.pdf", fish_covs, width = 12, height = 10, dpi = 300)
 ```
+
+
 # Checking the distribution of responce variables per municipality
 
 Just to see if the distribution of fisheries and aquaculture production over years look very different when plotted per municipality.
 There is a clear increase in the production over years!
 ```{r, fig.width=10, fig.height=7, warning = F}
-ggplot(data = seafood_prep) +
+ggplot(data = mcp75) +
   geom_point(mapping = aes(x = year, y =  aqua_prod_ton), size = 0.5) +
   geom_smooth(mapping = aes(x = year, y =  aqua_prod_ton), size = 0.4) +
   facet_wrap( municip ~ .) +
@@ -306,7 +323,7 @@ ggplot(data = seafood_prep) +
 
 Same but for fisheries
 ```{r, fig.width=10, fig.height=7, warning = F}
-ggplot(data = seafood_prep) +
+ggplot(data = mcp75) +
   geom_point(mapping = aes(x = year, y =  total_catch_ton), size = 0.5) +
   geom_smooth(mapping = aes(x = year, y =  total_catch_ton), size = 0.4) +
   facet_wrap( municip ~ .) +
@@ -316,6 +333,9 @@ ggplot(data = seafood_prep) +
     panel.background = element_rect(fill = "white"))
   
 ```
+
+
+
 
 
 # Verifying dependence in the response variables
@@ -328,7 +348,19 @@ seafood_temp <- arrange(seafood_prep, year)
 ```
 
 ```{r}
-acf(seafood_temp$total_catch_ton)
+mcp75_temp <- arrange(mcp75, year) 
+  acf(mcp75_temp$aqua_prod_ton, na.action = na.pass)
+
 ```
 
 
+
+```{r}
+acf(seafood_temp$total_catch_ton)
+```
+
+```{r}
+
+  acf(mcp75_temp$total_catch_ton_coast, na.action = na.pass)
+
+```

@@ -44,11 +44,11 @@ allkommuner <-readOGR(dsn = "~/github/nor-prep/prep/administrative/data/Study_Mu
 
 ## 59 municipalities selected for inla models
 ```{r}
-seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
+seafood <- read_csv(here("prep", "output_data", "mcp_75selected.csv"))
 ```
 
 
-Selected only 59 municipalities from the shape file
+Selected only 75 municipalities from the shape file
 
 ```{r}
 selected_mcp <-allkommuner[allkommuner$rg_id %in% seafood$municip_number,] 

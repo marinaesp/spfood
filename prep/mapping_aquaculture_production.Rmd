@@ -48,7 +48,7 @@ allkommuner <-readOGR(dsn = "/Users/marinaespinasse/github/nor-prep/prep/adminis
 Loading production data for fisheries and also Norwegian names of municipalities (with special Norwegian characters)
 ```{r}
 komnames_norw <- read_excel(file.path("./raw_data/komlist_norw.xlsx"))
-seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
+seafood <- read_csv(here("prep", "output_data", "mcp_75selected.csv"))
 ```
 
 # Preparing mapping layers 

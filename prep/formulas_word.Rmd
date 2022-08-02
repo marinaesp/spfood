@@ -60,7 +60,6 @@ $$p(y|\mathbf{\beta,\theta})$$
 $$\phi$$
 
 
-
 $$
 \begin{equation}
 \begin{align}
@@ -187,3 +186,19 @@ $\beta t$
 $\beta$
 
 $\delta_i$
+
+
+# Bernardinelli model
+
+$final\ trend = t(\beta + \delta_i)$ 
+
+
+# Final fisheries model
+
+ 
+
+$Log(FI_{ij}) = -0.468 + 1.692AR_{ij} + u_i + v_i + YR(\beta + \delta_i)$
+
+# Final aquaculture model
+
+$Log(AQ_{ij}) =  u_i + v_i + YR(\beta + \delta_i)$
