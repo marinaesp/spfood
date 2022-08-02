@@ -51,7 +51,7 @@ For the spfood paper I need only the municipalities that both had fisheries and 
 
 ```{r}
 komnames_norw <- read_excel(file.path("./raw_data/komlist_norw.xlsx"))
-seafood <- read_csv(here("prep", "output_data", "mcp_59selected.csv"))
+seafood <- read_csv(here("prep", "output_data", "mcp_75selected.csv"))
 ```
 
 # Preparing mapping layers 
@@ -132,8 +132,8 @@ labels05 <- labels05[1:length(labels05) - 1]
 
 
 plot_fishcatch05_prep2  <- plot_fishcatch05_prep %>% 
-  filter(!is.na(total_catch_ton)) %>% 
-  mutate(catch_quantiles = cut(total_catch_ton,
+  filter(!is.na(total_catch_ton_coast)) %>% 
+  mutate(catch_quantiles = cut(total_catch_ton_coast,
                                breaks = intervals05,
                                labels = labels05,
                                include.lowest = T)) 
@@ -224,7 +224,7 @@ komnames_prep18 <- filter(komnames18, !municip_number %in% c(1919, 1920))
 
 ```{r}
 
-intervals18 <-c(0, 8000, 16000, 24000, 32000)#intervals for year 2018 only
+intervals18 <-c(0, 8000, 16000, 24000)#intervals for year 2018 only
 
 labels18 <- imap_chr(intervals18, function(., id){
   return(paste0(formatC(intervals18[id], format="f", big.mark="," , digits = 0),
@@ -238,7 +238,7 @@ labels18 <- labels18[1:length(labels18) - 1]
 
 plot_fishcatch18_prep2  <- plot_fishcatch18_prep %>% 
   filter(!is.na(total_catch_ton)) %>% 
-  mutate(catch_quantiles = cut(total_catch_ton,
+  mutate(catch_quantiles = cut(total_catch_ton_coast,
                                breaks = intervals18,
                                labels = labels18,
                                include.lowest = T))
@@ -322,7 +322,7 @@ labels_all <- imap_chr(intervals, function(., id){
   return(paste0(formatC(intervals[id], format="f", big.mark="," , digits = 0),
                              "",
                              " – ",
-                             formatC(intervals[id + 1], format="f", big.mark="," ,                                digits = 0),
+                             formatC(intervals[id + 1], format="f", big.mark="," , digits = 0),
                              ""))
 })
 
@@ -397,3 +397,164 @@ ggsave("./figs/fish_catch_all_years.tiff", main_map_all, width = 18, height = 16
 
 ```
 
+
+# Grey scale maps for publication
+
+```{r}
+base_map_all_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+  theme(axis.text = element_text(size = 15),
+        strip.text = element_text(size = 15, face = "bold"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow"),
+        strip.background = element_rect(fill ="gray96"),
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_fishcatch_all2,
+    mapping = aes(fill = catch_quantiles),
+    color = "grey31",
+    size = 0.2
+  ) +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.9, 
+    end = 0.1,
+    name = "Fisheries catch ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top")) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = ""
+  ) +
+  facet_wrap(year ~.)
+
+```
+
+```{r}
+main_map_all_grey <- base_map_all_grey +
+  geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'gray31',  size = .2) 
+```
+
+
+
+```{r}
+ggsave("./figs/fish_catch_all_years_grey.tiff", main_map_all_grey, width = 18, height = 16, dpi = 300)
+```
+
+
+Same but for years 2005 and 2018
+
+```{r}
+base_map05_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+   #coord_sf(xlim = c(10, 32), ylim = c(65, 72)
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_fishcatch05_prep2,
+    mapping = aes(fill = catch_quantiles),
+    color = "white",
+    size = 0.2
+  ) +
+  
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.6,
+    end = 0.1,
+    name = "Fisheries catch ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "2005"
+  ) 
+
+```
+
+```{r, dpi = 250, fig.height=8, fig.width=8}
+main_map05_grey <- base_map05_grey +
+  geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'grey31',  size = .4) +    geom_sf_text(data = komnames_prep05, aes(X,Y, label= municip_number),fontface = "bold", size = 2, col="white") 
+main_map05_grey
+```
+
+
+```{r}
+base_map18_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+   #coord_sf(xlim = c(10, 32), ylim = c(65, 72)
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_fishcatch18_prep2,
+    mapping = aes(fill = catch_quantiles),
+    color = "white",
+    size = 0.2,
+    show.legend = FALSE
+  ) +
+  
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.6,
+    end = 0.1
+    # name = "Fisheries catch ranges, tons",
+    # guide = guide_legend(
+    #   keyheight = unit(8, units = "mm"),
+    #   title.position = "none"
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "2018"
+  ) 
+
+```
+
+```{r, dpi = 250, fig.height=8, fig.width=8}
+main_map18_grey <- base_map18_grey +geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'gray31',  size = .4) +geom_sf_text(data = komnames_prep18, aes(X,Y, label= municip_number),fontface = "bold", size = 2, col = "white") 
+main_map18_grey
+```
+
+
+
+
+
+
+
+```{r fig.height=5, fig.width=4, dpi = 400}
+grDevices::cairo_pdf("./figs/fisheries_catch_2005_2018_grey.pdf", width = 10, height = 12, fallback_resolution = 300)
+main_map05_grey/main_map18_grey
+```
