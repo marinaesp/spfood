@@ -41,10 +41,13 @@ aqua_prep <- aqua %>%
 
 ```
 
-Fisheries data still includes catch per species, I will take a sum of all species catches, to get a total fisheries production in tons
+Fisheries data still includes catch per species, I will take a sum of all species catches, to get a total fisheries production in tons.
+Fish_coast are catches by all fleets below 28 m (so-called coastal fleet),
+fish_11m are catches by all fleets below 11 m (the smallest vessels)
 ```{r}
 fish <- read.csv(here("prep", "output_data", "catch_total_per_mcp.csv"))
 fish_coast <- read.csv(here("prep", "output_data", "catch_total_coastal_per_mcp.csv"))
+fish_11m <- read.csv(here("prep", "output_data", "catch_total_11m_per_mcp.csv"))
 ```
 
 
@@ -52,6 +55,9 @@ fish_coast <- read.csv(here("prep", "output_data", "catch_total_coastal_per_mcp.
 ```{r}
 fish_coast_prep <-fish_coast |> 
   rename(Total_catch_coastal = Total_catch_new)
+
+fish_11m_prep <-fish_11m |> 
+  rename(Total_catch_11m = Total_catch_new)
 
 ```
 
@@ -61,12 +67,16 @@ fish_coast_prep <-fish_coast |>
 fish_prep <- fish %>% 
   left_join(fish_coast_prep[,-5],
             by = c("Year", "Municip_number", "Species")) %>% 
+  left_join(fish_11m_prep[,-5],
+            by = c("Year", "Municip_number", "Species")) %>% 
   janitor::clean_names(.) %>% 
   rename(municip = municip_name_new,
          total_catch = total_catch_new) %>% 
   group_by(year, municip, municip_number) %>% 
   summarize(total_catch = sum(total_catch, na.rm = T),
-            total_catch_coast = sum(total_catch_coastal, na.rm=T)) %>% 
+            total_catch_coast = sum(total_catch_coastal, na.rm=T),
+            total_catch_11m = sum(total_catch_11m, na.rm=T)
+            ) %>% 
   filter(year >= 2005 & year <= 2019)
 ```
 
@@ -376,22 +386,23 @@ map(spfood_data, ~ sum(is.na(.x)))
 Replace NA in aquaculture production with zeroes but when the aquaculture production is negative - replace with NA.
 Then,I also divide the aquaculture production by 1000 to convert kg to tons.  
 
-25 observations of aquaculture produciton will be NA due to negative production values.
+25 observations of aquaculture production will be NA due to negative production values.
 
 ```{r}
 spfood_data_final <- spfood_data |> 
   mutate(total_catch = replace(total_catch, 
                                is.na(total_catch),
                                0
-          )
-  ) |> 
+          )) |> 
   
   mutate(total_catch_coast = replace(total_catch_coast, 
                                is.na(total_catch_coast),
                                0
-          )
-  ) |> 
-  
+          )) |> 
+mutate(total_catch_11m = replace(total_catch_11m, 
+                               is.na(total_catch_11m),
+                               0
+          )) |> 
   mutate(aqua_prod = ifelse(
     is.na(aqua_prod),
     0,
@@ -402,11 +413,11 @@ spfood_data_final <- spfood_data |>
     NA,
     aqua_prod
   )) |> 
-  
   mutate(aqua_prod_ton = aqua_prod/1000) |> 
   mutate(total_catch_ton = total_catch,
-         total_catch_ton_coast = total_catch_coast) |> 
-  select(-c(municip.y, aqua_prod, total_catch, total_catch_coast))
+         total_catch_ton_coast = total_catch_coast,
+         total_catch_ton_11m = total_catch_11m) |> 
+  select(-c(municip.y, aqua_prod, total_catch, total_catch_coast, total_catch_11m))
 ```
 
 
