@@ -44,6 +44,7 @@ krabnew <- read_excel("./raw_data/krabbefangst_2013_2018.xlsx")
 catch2018 <-read.csv("/Volumes/ftp.imr.no/Fishery/DeliveryDataFiskDir/fangstdata_2018-2.csv", sep = ";")
 ```
 
+
 # Formatting 2018 catch data
 Source for 2018 data:
 https://www.fiskeridir.no/Tall-og-analyse/AApne-data/AApne-datasett/elektronisk-rapportering-ers
@@ -53,6 +54,7 @@ https://www.fiskeridir.no/Yrkesfiske/Tall-og-analyse/Fangst-og-kvoter/Fangst/Fan
 
 
 NB! Unlike in the data for 1994-2017, 2018 catches are in kg, not in tons!
+Here I will select the smallest fleet only (11 m length), for further analyses
 ```{r}
 catch18_prep <- catch2018 %>% 
   filter(Kyst.hav..kode. == "8") %>% 
@@ -70,7 +72,7 @@ catch18_prep <- catch2018 %>%
     Rundvekt
   )) %>% 
   clean_names(.)  |> 
-filter(!lengdegruppe ==  "28 m og over ")
+filter(lengdegruppe  == "Under 11 m")
 ```
 
 
@@ -86,9 +88,9 @@ temp_catch<-bind_rows(temp_catch99, temp_catch17)
 colnames(temp_catch) <- c("Year", "Month", "Municip_number", "Municip_name","Species",
                           "Coast_ocean", "Region", "Fleet_length", "Catch_weight", "Payed_NOK")
 
-#remove fleets over 28 m
+#remove fleets over 11 m
 temp_catch <- temp_catch |> 
-  filter(!Fleet_length == "28m og over")
+  filter(Fleet_length == "Under 11m")
 ```
 
 Several Norwegian names were used for the same species in 1994-2017, let's check all variations.
@@ -441,7 +443,7 @@ ggplot(catch_total, aes(x = Year, y = Total_catch, fill = English))+
 
 
 # Further data cleaning: removing and re-arranging locations 
-Deleting municipalities that are not in the study (Beiarn county and Guovdageaidnu-Kautokeino)
+Deleting municipalities that are not in the study (Beiarn  and Guovdageaidnu-Kautokeino)
 Re-estimating landings for the municipalities that were merged (Bodo + Skjerstad_2005, Bjarkoy_2013 + Harstad_2013) - I sum the landings for these pairs of municipalities for the years before they've merged. 
 Using this approach to merge catches will create duplicated rows, I remove them in the chunk after.
 ```{r}
@@ -472,29 +474,9 @@ fish_nor_prep2 <- fish_nor_prep %>%
 
 # Save the final catches table
 ```{r}
-#write.csv(fish_nor_prep2, here("prep", "output_data", "catch_total_coastal_per_mcp.csv"), row.names = F)
+#write.csv(fish_nor_prep2, here("prep", "output_data", "catch_total_11m_per_mcp.csv"), row.names = F)
 ```
 
 
-# Plot the nubmer of fleet types in 2005-2017
-```{r}
-plot_fleet <- temp_catch |> 
-filter(Year >= "2005") |> 
-group_by(Fleet_length) |> tally() |> 
-mutate(Fleet_length = reorder(Fleet_length, -n))  |> 
-mutate(length_prop = n/sum(n))
 
-ggplot(plot_fleet) +
-  geom_col(aes(x = Fleet_length, y = n), fill = "darkblue") +
-  theme_minimal()
-
-cols = rainbow(n = 5)
-
-ggplot(plot_fleet) +
-    geom_col(aes(x = 1, y = n, fill = Fleet_length), position = "fill") +
-    coord_polar(theta = "y") +
-    scale_fill_manual(values = cols ) +
-  theme_minimal()
-  
-```
 
