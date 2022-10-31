@@ -397,3 +397,168 @@ ggsave("./figs/aqua_yield_all_years.tiff", main_map_all, width = 18, height = 16
 
 ```
 
+# Grey scale maps
+
+Like for fisheries, i need to create grey scale maps for the publication's hard copy
+```{r}
+base_map_all_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "dimgray", 
+   size = 0.3) +
+  theme(axis.text = element_text(size = 15),
+        strip.text = element_text(size = 15, face = "bold"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow") ,
+        strip.background = element_rect(fill ="gray96"),
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_aqua_all2,
+    mapping = aes(fill = prod_quantiles),
+    color = "white",
+    size = 0.2
+  ) +
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.9, 
+    end = 0.1,
+    name = "Aquaculture yield ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top")) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = ""
+  ) +
+  facet_wrap(year ~.)
+```
+
+```{r}
+main_map_all_grey <- base_map_all_grey +
+  geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'gray31',  size = .2) 
+```
+
+
+```{r}
+main_map_all_grey
+```
+
+
+
+```{r, fig.width=10, fig.height=7}
+ggsave("./figs/aqua_yield_all_years_grey.tiff", main_map_all_grey, width = 18, height = 16, dpi = 300)
+```
+
+
+And similar maps for years 2005 and 2018
+
+```{r}
+base_map05_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "gray31", 
+   size = 0.3) +
+   #coord_sf(xlim = c(10, 32), ylim = c(65, 72)
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_aqua05_prep2,
+    mapping = aes(fill = prod_quantiles),
+    color = "white",
+    size = 0.2
+  ) +
+  
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.6,
+    end = 0.1,
+    name = "Aquaculture yield ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top"
+    )
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "2005"
+  ) 
+
+```
+
+```{r, dpi = 250, fig.height=8, fig.width=8}
+main_map05_grey <- base_map05_grey +
+  geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'gray31',  size = .4) +    geom_sf_text(data = komnames_prep05, aes(X,Y, label= municip_number),fontface = "bold", size = 2, col = "white") 
+main_map05_grey
+```
+
+
+
+
+
+```{r}
+base_map18_grey <- ggplot() +
+  geom_sf(
+   data = world, 
+   fill = "antiquewhite1", 
+   color = "gray31", 
+   size = 0.3) +
+   #coord_sf(xlim = c(10, 32), ylim = c(65, 72)
+  theme(axis.text = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 15,  face = "bold"),
+        panel.background = element_rect(fill = "snow") ,
+        panel.grid.major = element_line(color = "#dbdbd9", linetype = "dashed"),
+        plot.title = element_text(hjust = 0.5, vjust = 0.5, size = 17, face = "bold")
+  ) +
+  geom_sf(
+    data = plot_aqua18_prep2,
+    mapping = aes(fill = prod_quantiles),
+    color = "white",
+    size = 0.2,
+    show.legend = TRUE
+  ) +
+  
+  coord_sf(xlim = c(8, 32), ylim = c(64, 72), expand = FALSE) +
+  labs(x = "Longitude", y = "Latitude") +
+  scale_fill_grey(
+    start = 0.6,
+    end = 0.1,
+    name = "Aquaculture yield ranges (ton)",
+    guide = guide_legend(
+      keyheight = unit(8, units = "mm"),
+      title.position = "top")
+    ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "2018"
+  ) 
+
+```
+
+
+```{r, dpi = 250, fig.height=8, fig.width=8}
+main_map18_grey <- base_map18_grey +geom_path(kommuner.pol, mapping = aes(x = long, y = lat, group = id), color = 'gray31',  size = .4) +geom_sf_text(data = komnames_prep18, aes(X,Y, label= municip_number),fontface = "bold", size = 2, col = "white") 
+main_map18_grey
+```
+
+
+
+```{r fig.height=5, fig.width=4, dpi = 400}
+grDevices::cairo_pdf("./figs/aquaculture_yield_2005_2018_grey.pdf", width = 10, height = 12, fallback_resolution = 300)
+main_map05_grey/main_map18_grey
+```

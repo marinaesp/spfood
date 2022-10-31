@@ -49,7 +49,7 @@ komlist <-filter(komlist, !Name == "NonCoast")
 ohikom <-allkommuner[allkommuner$KOMM %in% komlist$Komnum,] 
 ohifylke <-fylker[fylker$NAVN %in% c("Nordland", "Troms", "Finnmark"),]
 kommuner.pol <- spTransform(ohikom, CRS("+proj=longlat +ellps=GRS80"))
-fylker.pol <-spTransform(ohikom, CRS("+proj=longlat +ellps=GRS80"))
+fylker.pol <-spTransform(ohifylke, CRS("+proj=longlat +ellps=GRS80"))
 ```
 
 Load the world mapping layers and create an sf-object based on the municipalities shape file.

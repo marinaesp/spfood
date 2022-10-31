@@ -281,7 +281,7 @@ form6.1 <-  catch_coast_thstons ~ sea_area + percent_wforce +distance_rank + pop
 M6.1 <-inla(formula = form6.1,
           family = "tweedie",# scale = ,
           data=seafood_prep2,
-          safe = TRUE,
+          #safe = TRUE,
     control.compute = list(dic = TRUE,
                            waic = TRUE),
     control.fixed=list(prec=1,prec.intercept=0.5, mean.intercept=0.0001),

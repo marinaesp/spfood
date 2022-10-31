@@ -444,11 +444,11 @@ map(spfood_data_final_selected, ~ sum(is.na(.x)))
 
 # Save final tables
 ```{r}
-write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
+#write.csv(spfood_data_final, here("prep", "output_data", "spfood_allvars.csv"), row.names = FALSE)
 ```
 
 ```{r}
-write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_75selected.csv"), row.names = FALSE)
+#write.csv(spfood_data_final_selected, here("prep", "output_data", "mcp_75selected.csv"), row.names = FALSE)
 ```
 
 

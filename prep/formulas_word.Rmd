@@ -202,3 +202,98 @@ $Log(FI_{ij}) = -0.468 + 1.692AR_{ij} + u_i + v_i + YR(\beta + \delta_i)$
 # Final aquaculture model
 
 $Log(AQ_{ij}) =  u_i + v_i + YR(\beta + \delta_i)$
+
+
+# Bayesian models: mathematical formulations
+
+
+## Intrindic Conditional autoregressive (ICAR) model
+
+This model is also known as the Besag model (Besag et al 1996). 
+
+Here the conditional distribution of a spatial random effect of unit $i$ $b_i$ is formulated as follows (Riebler et al 2016):
+
+$$
+b_i|\mathbf{b_{-i}},\tau_b  \sim  \mathcal{N} (\frac{1}{n_{\delta_i}} \sum_{j \in  \delta_i} b_j, \frac{1}{n_{\delta_i}\tau_b})
+$$
+
+The parameter $\tau_b$ is the precision (inverse of the variance) of the spatial random effect, $\mathbf{b_{-i}}$ is a vector of random effects levels (spatial units) that does not include unit $i$, $n$ is the number of neighbors of the spatial unit $i$, $\delta_i$ is a set of neighbors of a unit $i$. 
+
+Then, the conditional mean of the random effect $b_i$ is the average of the effects over the neighborhood:
+
+$$
+\bar{b_i} = \frac{\sum_{j \in  \delta_i} b_j}{ n_{\delta_i}  }
+$$
+
+The conditional variance of $b_i$ is proportional to the number of neighbors of the unit $i$ :
+
+$$
+\sigma^2_{b_i} = \frac{r}{n_{\delta_i}}
+$$
+where $r$ is the overall variance of the spatial random effect $\mathbf{b}$.
+
+
+
+The joint distribution of a spatial random effect $\mathbf{b}$ is formulated as follows:
+
+$$
+\pi(\mathbf{b}|\tau_b) \propto \tau_b^{(n-1)/2}     exp( - \frac{\tau_b}{2} \sum_{i} \sum_{ j \in \delta_i} (b_i-b_j)^2   )
+$$
+
+## BYM (Convolution) model
+The BYM model decomposes the spatial random effect $\mathbf{b}$ into a sum of structured and unstructured components as:
+
+$\mathbf{b} = \mathbf{u} + \mathbf{v}$,
+
+where  $u$ is defined as shown in the Equation 1 above (Besag model), and component $u$ in BYM model has a precision parameter $\tau_u$. $v$ denotes independent (and uncorrelated) Normally distributed random effect component with a separate precision $\tau_v$:
+
+$$
+\mathbf{v} \sim \mathcal{N} (0, \tau_v^{-1}\mathbf{I})
+$$
+In the BYM model, precision parameters $\tau_u$ and $\tau_v$ are dependent.
+
+
+## BYM2 model
+BYM2 is a modified BYM model, where structured spatial component $\mathbf{u}$ is scaled and is denoted as $\mathbf{u_*  }$. This scaled spatial  component has  a common marginal precision $\tau_b$, which  gives a unified interpretation of spatial variability for different sets and structures of the spatial units (sec. 3.3 i Riebler et al (2016), samt sec.5 i PC-prior paperet fra 2017 (Simpson et al))
+
+The modified spatial random effect is constructed as:
+$$
+\mathbf{b} =\frac{1}{\sqrt{\tau_b}}(\sqrt{1-\phi\mathbf{v}}   + \sqrt{\phi}\mathbf{u_*})
+$$
+
+where $0 < \phi < 1$  measures the proportion of the marginal variance attributed to structured spatial variation $\mathbf{u_*}$
+For further mathematical details of the spatial models, please see Riebler et al 2016.
+
+## Spatial-temporal models
+
+These models are formulated similarly to BYM or BYM2, but are extended to include a parametric temporal component (linear trend, Bernardinelli model) or a non-parametric temporal component (random walk models). Temporal component is based on time points (e.g., years) of observations.
+
+$$
+Log(y_{it}) = \alpha_0 + u_i + v_i + Time_t
+$$
+For further mathematical details of the spatial-temporal models, please see Blangiardo et al 2015.
+
+
+
+
+## PC priors specification
+The PC priors for the BYM2 models were specified as follows:
+
+$P(\frac{1}{(\sqrt{\tau_b}}>2) = 0.01$
+
+$P(\phi < 0.5) = 0.5$
+
+See Simpson et al 2017 for further details on the PC priors.
+
+
+
+********Comments from Sigrunn, 26.09.2022*************
+
+Når jeg slår opp i referanser ser jeg at mange bare har droppet det første leddet selv om tau.b er stokastisk. Min referanse på uttrykket er opprinnelig fra boka til Rue og Held (2005), likn. 3.30 s. 102, der modellen er formulert som en intrinsic GMRF modell. Vi brukte dette uttrykket både i Riebler et al (2016) og Sørbye og Rue (2014). Jeg ser at modellen også defineres ved n/2 i eksponent noen steder. Det er ok hvis du bare dropper dette igjen, siden leddet tydeligvis ikke trenger å være med. 
+
+Når det gjelder BYM så er tau_u og tau_v avhengige og jeg ville ikke skrevet ".....common marginal variance tau_b" i linje 1-2 på s. 2. Det du har skrevet i gult hører til under BYM2. Merk at tau_b er precision parameter, mens tau_b^{-1} angir marginal varians. Poenget er at tau_b har samme tolkning uavhengig av antall noder (spatial units) som er med i grafen, samt selve naboområdestrukturen. Du mister litt av dette ved omskrivingen. Evnt. different sets and structures of the spatial units? Referanser: sec. 3.3 i Riebler et al (2016), samt sec.5 i PC-prior paperet fra 2017 (Simpson et al). 
+*******8
+
+
+*******comments about BYM theory*****************************************
+Using BYM, the structured and unstructured effects have separate precision parameters and this might imply possible confounding (it’s unclear how the variability is split over these two effects). This is avoided by reparameterizing the model of (u+v) to have one common precision parameter and then phi distributes the variability between u and v.  BYM2 is not the only way to implement such a  reparameterization (see Riebler et al, 2016), but it’s the only one that scales the spatial effect u, such that the precision parameter actually represent the marginal precision of this component. Using BYM2 the two hyperparameters have  clear (orthogonal) interpretation, avoiding that the parameters are confounded. So, I guess the simple answer is that BYM2 avoid confounding between the precision and mixing parameter. (The actual reparameterization could be given in an appendix).

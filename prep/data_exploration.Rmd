@@ -60,7 +60,7 @@ Zuur, Alain F., and Elena N. Ieno. "Spatial, temporal and spatial-temporal ecolo
 
 Cleveland dotplots of the variables
 ```{r}
-Mydotplot(seafood_prep[,c(7:14)])
+Mydotplot(seafood_prep[,c(5:14)])
 ```
 
 
@@ -213,7 +213,7 @@ MyMultipanel.ggp2(Z = seafood_prep,
 
 This looks more interesting! Relationships are close to linear, but this result include all municipalities, it might be different per municipality.
 
-Now just make a nicer version of this plot. Also I use rank of the geographical distnace instead of distance. This plot is based on the selected municiplities (59) only
+Now just make a nicer version of this plot. Also I use rank of the geographical distnace instead of distance. This plot is based on the selected municiplities (75) only
 
 ```{r}
 mcp75_plots <- mcp75
@@ -257,7 +257,7 @@ Might be interesting to examine their associations statistically
 ```{r}
 fish_aqua <-ggplot(
   data = seafood_prep,
-  mapping = aes(x = total_catch_ton, y = aqua_prod_ton)) +
+  mapping = aes(x = total_catch_ton_coast, y = aqua_prod_ton)) +
   geom_point() +
   geom_smooth() +
   labs(x = "Fisheries catch (ton)",
@@ -360,7 +360,6 @@ acf(seafood_temp$total_catch_ton)
 ```
 
 ```{r}
-
-  acf(mcp75_temp$total_catch_ton_coast, na.action = na.pass)
+acf(mcp75_temp$total_catch_ton_coast, na.action = na.pass)
 
 ```
