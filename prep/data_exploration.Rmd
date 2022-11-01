@@ -119,20 +119,22 @@ mcp75 <- read_csv(here::here("prep", "output_data", "mcp_75selected.csv"))
 myvars75 <- mcp75[,c("aqua_prod_ton",
                          "total_catch_ton_coast",
                           "distance",
+                          "unemployed",
+                       "percent_wforce",
                           "population",
                           "popgrowth",
-                          "sea_area",
-                        "percent_wforce",
-                          "unemployed")]
+                          "sea_area"
+                         )]
 
 varnames75 <- list("Aquaculture", 
-                  "Fisheries (coastal)",
+                  "Fisheries",
                  "Distance South to North",
+                  "Number of unemployed",
+                 "Percent in workforce",
                  "Population", 
                  "Population growth",
-                 "Sea area",
-                  "Percent in workforce",
-                 "Number of unemployed"  )
+                 "Sea area"
+                  )
 
 
 par(mfrow = c(2,4))
@@ -260,7 +262,7 @@ fish_aqua <-ggplot(
   mapping = aes(x = total_catch_ton_coast, y = aqua_prod_ton)) +
   geom_point() +
   geom_smooth() +
-  labs(x = "Fisheries catch (ton)",
+  labs(x = "Fisheries landings (ton)",
        y = "Aquaculture production (ton)")
 
 fish_aqua
