@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
     fig.width = 8,
     fig.height = 6,
     strip.white = T)
-source('~/github/spfood/src/common.r')
+source('~/Documents/Marina/Research/github/spfood/src/common.r')
 ```
 
 ```{r, message=F}
@@ -41,7 +41,7 @@ library(here)
 # Loading data
 ## Municipalities shape files
 ```{r}
-allkommuner <-readOGR(dsn = "/Users/marinaespinasse/github/nor-prep/prep/administrative/raw/shapefiles/NO_AdminOmrader")
+allkommuner <-readOGR(dsn = "/Users/marinaespinasse/Documents/Marina/Research/github/nor-prep/prep/administrative/raw/shapefiles/NO_AdminOmrader")
 ```
 
 # Annual production data
@@ -195,7 +195,7 @@ base_map05 <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
     values = cols,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top"
@@ -273,7 +273,7 @@ base_map18 <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
     values = cols,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top")
@@ -370,7 +370,7 @@ base_map_all <- ggplot() +
   labs(x = "Longitude", y = "Latitude") +
   scale_fill_manual(
     values = cols2,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top")) +
@@ -427,7 +427,7 @@ base_map_all_grey <- ggplot() +
   scale_fill_grey(
     start = 0.9, 
     end = 0.1,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top")) +
@@ -485,7 +485,7 @@ base_map05_grey <- ggplot() +
   scale_fill_grey(
     start = 0.6,
     end = 0.1,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top"
@@ -537,7 +537,7 @@ base_map18_grey <- ggplot() +
   scale_fill_grey(
     start = 0.6,
     end = 0.1,
-    name = "Aquaculture yield ranges (ton)",
+    name = "Aquaculture yield (ton)",
     guide = guide_legend(
       keyheight = unit(8, units = "mm"),
       title.position = "top")

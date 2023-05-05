@@ -108,9 +108,9 @@ plot(seafood.nb.sel,
      col = 2)
 ```
 
-None of the municipalities are left without neighbors but some have only 1 neighbors - in the far north. Only 1 neighbor mean that the variance for spatially structured random component u_i (in the ICAR model) will be large, lack of information will be visible. Since there are also municipalities with less data (often), the model estimates for them will be more shrunkten to the overall mean (northern-Norway's mean).
+None of the municipalities are left without neighbors but some have only 1 neighbors - in the far north. Only 1 neighbor mean that the variance for spatially structured random component u_i (in the ICAR model) will be large, lack of information will be visible. Since there are also municipalities with less data (often), the model estimates for them will be more shrunken to the overall mean (northern-Norway's mean).
 
-Save the neighbours plots
+Save the neighbors plots
 ```{r}
 tiff(file = "./figs/neighbours.tiff",width = 7, height = 6, units = 'in', res = 300)
 plot(seafood.shp.selected, border = grey(0.5))   #Don't close the graph
@@ -181,6 +181,8 @@ Let's remove population and recalculate VIFs:
 ```{r}
 corvif(seafood_prep2[,c(4,6:8,10)])#better!
 ```
+
+
 What if i also remove one of the variables - unemployed or workforce, they provide about the same information
 
 ```{r}

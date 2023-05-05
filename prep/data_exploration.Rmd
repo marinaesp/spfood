@@ -173,6 +173,7 @@ hist(seafood_prep$aqua_prod_log, main = "Log of aquaculture production", xlab = 
 
 
 # Collinearity
+
 ```{r}
 Mypairs(myvars75)
 ```
@@ -198,6 +199,7 @@ MyMultipanel.ggp2(Z = seafood_prep,
 No clear associations or patterns, but i need to consider transformation of a response variable.
 
 ## Aquaculture production versus covariates
+
 What if aquaculture production alone would be used as a response variable? Let's see also if fisheries catch has anything to do with aquaculture production
 
 
